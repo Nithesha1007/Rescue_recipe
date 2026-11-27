@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Leaf / rescue element -->
+    <path
+        android:fillColor="#E86A33"
+        android:pathData="M54,28 C64,28 74,38 74,52 C74,68 54,80 54,80 C54,80 34,68 34,52 C34,38 44,28 54,28 Z" />
+    <!-- Soundwave / voice rescue icon in center -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,46 L50,46 L50,58 L48,58 Z M53,42 L55,42 L55,62 L53,62 Z M58,46 L60,46 L60,58 L58,58 Z" />
+</vector>

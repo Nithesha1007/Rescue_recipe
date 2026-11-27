@@ -1,0 +1,4 @@
+# Secrets (append these lines to the .gitignore created by `flutter create`)
+env.json
+.env
+*.env
