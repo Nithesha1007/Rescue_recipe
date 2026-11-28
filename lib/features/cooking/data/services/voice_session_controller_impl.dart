@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../../../settings/domain/entities/user_preferences.dart';
 import '../../../voice/domain/repositories/speech_repository.dart';
 import '../../domain/entities/voice_command.dart';
+import '../../domain/services/tts_voice_manager.dart';
 import '../../domain/services/voice_session_controller.dart';
 import '../../domain/utils/command_parser.dart';
 import 'tts_service.dart';
@@ -9,6 +11,7 @@ import 'tts_service.dart';
 class VoiceSessionControllerImpl implements VoiceSessionController {
   final TtsService _ttsService;
   final SpeechRepository _speechRepository;
+  final TtsVoiceManager _ttsVoiceManager;
 
   final _stateController = StreamController<AudioSessionState>.broadcast();
   final _commandController = StreamController<VoiceCommand>.broadcast();
@@ -18,13 +21,16 @@ class VoiceSessionControllerImpl implements VoiceSessionController {
   int _silentCycles = 0;
   bool _isDisposed = false;
   bool _isPausedContext = false;
+  GuideLanguage _guideLanguage = GuideLanguage.english;
   StreamSubscription<SpeechRecognitionUpdate>? _speechSubscription;
 
   VoiceSessionControllerImpl({
     required TtsService ttsService,
     required SpeechRepository speechRepository,
+    TtsVoiceManager? ttsVoiceManager,
   })  : _ttsService = ttsService,
-        _speechRepository = speechRepository {
+        _speechRepository = speechRepository,
+        _ttsVoiceManager = ttsVoiceManager ?? TtsVoiceManager() {
     _init();
   }
 
@@ -42,6 +48,15 @@ class VoiceSessionControllerImpl implements VoiceSessionController {
   @override
   AudioSessionState get currentState => _currentState;
 
+  @override
+  GuideLanguage get guideLanguage => _guideLanguage;
+
+  @override
+  void setGuideLanguage(GuideLanguage language) {
+    _guideLanguage = language;
+    _ttsVoiceManager.configureTtsLanguage(language);
+  }
+
   void _setState(AudioSessionState newState) {
     if (_isDisposed) return;
     _currentState = newState;
@@ -52,10 +67,10 @@ class VoiceSessionControllerImpl implements VoiceSessionController {
   Future<void> speak(String text) async {
     if (_isDisposed) return;
 
-    // 1. Invalidate ongoing speech/listening tasks
+    // Invalidate ongoing speech/listening tasks
     final currentGen = ++_generation;
 
-    // 2. Guarantee listening is completely stopped first
+    // Guarantee listening is completely stopped first
     await _stopListeningInternal();
 
     if (_isDisposed || currentGen != _generation) return;
@@ -79,12 +94,11 @@ class VoiceSessionControllerImpl implements VoiceSessionController {
 
     if (_isDisposed || currentGen != _generation) return;
 
-    // 300ms buffer after speech finishes so the mic does not hear room echo or TTS tail
+    // 300ms buffer after speech finishes so mic does not pick up echo
     await Future.delayed(const Duration(milliseconds: 300));
 
     if (_isDisposed || currentGen != _generation) return;
 
-    // Transition back to idle
     _setState(AudioSessionState.idle);
   }
 
@@ -95,12 +109,12 @@ class VoiceSessionControllerImpl implements VoiceSessionController {
 
     final currentGen = ++_generation;
 
-    // 1. Stop any TTS before listening starts
+    // Stop any TTS before listening starts
     await _ttsService.stop();
 
     if (_isDisposed || currentGen != _generation) return;
 
-    // 2. Stop any existing listening
+    // Stop any existing listening
     await _stopListeningInternal();
 
     if (_isDisposed || currentGen != _generation) return;
@@ -116,7 +130,17 @@ class VoiceSessionControllerImpl implements VoiceSessionController {
     // Cancel old subscription if any
     await _speechSubscription?.cancel();
 
-    final updateStream = _speechRepository.startListening();
+    // Bilingual listening: When GuideLanguage != English, alternate recognition locale between en_IN and chosen locale on silent cycles
+    String? listenLocale = 'en_IN';
+    if (_guideLanguage == GuideLanguage.tamil) {
+      listenLocale = (_silentCycles % 2 == 0) ? 'ta_IN' : 'en_IN';
+    } else if (_guideLanguage == GuideLanguage.hindi) {
+      listenLocale = (_silentCycles % 2 == 0) ? 'hi_IN' : 'en_IN';
+    } else if (_guideLanguage == GuideLanguage.tanglish) {
+      listenLocale = (_silentCycles % 2 == 0) ? 'en_IN' : 'ta_IN';
+    }
+
+    final updateStream = _speechRepository.startListening(localeId: listenLocale);
     _speechSubscription = updateStream.listen(
       (update) {
         if (_isDisposed || currentGen != _generation) return;
@@ -135,13 +159,9 @@ class VoiceSessionControllerImpl implements VoiceSessionController {
   Future<void> _handleSpeechResult(String transcript, int gen) async {
     if (_isDisposed || gen != _generation) return;
 
-    // Reset silent cycles on speech input
     _silentCycles = 0;
-
-    // Parse command
     final cmd = CommandParser.parse(transcript, isPaused: _isPausedContext);
 
-    // Stop listening before processing
     await _stopListeningInternal();
     if (_isDisposed || gen != _generation) return;
 
@@ -158,10 +178,8 @@ class VoiceSessionControllerImpl implements VoiceSessionController {
     if (_isDisposed || gen != _generation) return;
 
     if (_silentCycles >= 3) {
-      // Stop auto-listening after 3 silent cycles to save battery
       _setState(AudioSessionState.idle);
     } else {
-      // Try listening one more round
       startListening(isPausedContext: _isPausedContext);
     }
   }

@@ -9,11 +9,15 @@ abstract final class DebugLogger {
     }
   }
 
+  static void general(String message) => log('APP', message);
+
   static void speech(String message) => log('SPEECH', message);
 
   static void tts(String message) => log('TTS', message);
 
   static void ai(String message) => log('GEMINI-AI', message);
+
+  static void recipes(String message) => log('RECIPES', message);
 
   static void error(String tag, String message, [Object? error, StackTrace? stack]) {
     if (kDebugMode) {

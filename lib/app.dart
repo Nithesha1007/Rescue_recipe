@@ -9,6 +9,7 @@ import 'features/insights/presentation/cubit/insights_cubit.dart';
 import 'features/notifications/domain/services/notification_scheduler.dart';
 import 'features/recipes/presentation/bloc/recipes_bloc.dart';
 import 'features/recipes/presentation/bloc/recipes_event.dart';
+import 'features/recipes/presentation/cubit/rescue_suggestions_cubit.dart';
 import 'features/settings/presentation/cubit/settings_cubit.dart';
 import 'features/settings/presentation/cubit/settings_state.dart';
 import 'features/shell/presentation/cubit/navigation_cubit.dart';
@@ -63,6 +64,9 @@ class _RescueRecipeAppState extends State<RescueRecipeApp> {
         ),
         BlocProvider<RecipesBloc>(
           create: (_) => sl<RecipesBloc>()..add(const LoadRecipes()),
+        ),
+        BlocProvider<RescueSuggestionsCubit>.value(
+          value: sl<RescueSuggestionsCubit>(),
         ),
         BlocProvider<InsightsCubit>(
           create: (_) => sl<InsightsCubit>()..loadInsights(),

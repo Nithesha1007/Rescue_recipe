@@ -13,6 +13,7 @@ import '../../features/cooking/domain/usecases/finish_cooking.dart';
 import '../../features/cooking/domain/usecases/get_speech_rate.dart';
 import '../../features/cooking/domain/usecases/navigate_step.dart';
 import '../../features/cooking/domain/usecases/start_cooking.dart';
+import '../../features/cooking/domain/services/tts_voice_manager.dart';
 import '../../features/cooking/presentation/bloc/cooking_bloc.dart';
 import '../../features/ingredients/data/datasources/ingredient_local_datasource.dart';
 import '../../features/ingredients/data/models/ingredient_model.dart';
@@ -26,6 +27,7 @@ import '../../features/ingredients/domain/usecases/mark_ingredient_discarded.dar
 import '../../features/ingredients/domain/usecases/mark_ingredient_used.dart';
 import '../../features/ingredients/domain/usecases/resolve_expiry_phrase.dart';
 import '../../features/ingredients/domain/usecases/update_ingredient.dart';
+import '../../features/ingredients/domain/usecases/watch_active_ingredients.dart';
 import '../../features/ingredients/presentation/cubit/inventory_cubit.dart';
 import '../../features/insights/domain/usecases/clear_usage_history.dart';
 import '../../features/insights/domain/usecases/get_insights.dart';
@@ -39,14 +41,18 @@ import '../../features/recipes/data/datasources/gemini_recipe_datasource.dart';
 import '../../features/recipes/data/datasources/preferences_local_datasource.dart';
 import '../../features/recipes/data/datasources/saved_recipe_repository.dart';
 import '../../features/recipes/data/repositories/recipe_repository_impl.dart';
+import '../../features/recipes/data/services/media_resolver_impl.dart';
 import '../../features/recipes/domain/repositories/recipe_repository.dart';
 import '../../features/recipes/domain/services/dish_image_resolver.dart';
+import '../../features/recipes/domain/services/media_resolver.dart';
 import '../../features/recipes/domain/usecases/generate_recipes.dart';
 import '../../features/recipes/domain/usecases/get_diet_preference.dart';
 import '../../features/recipes/domain/usecases/get_recipe_by_id.dart';
 import '../../features/recipes/domain/usecases/rank_recipes.dart';
+import '../../features/recipes/domain/usecases/translate_recipe_content.dart';
 import '../../features/recipes/domain/usecases/update_diet_preference.dart';
 import '../../features/recipes/presentation/bloc/recipes_bloc.dart';
+import '../../features/recipes/presentation/cubit/rescue_suggestions_cubit.dart';
 import '../../features/settings/data/datasources/settings_local_datasource.dart';
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
 import '../../features/settings/domain/repositories/settings_repository.dart';
@@ -61,8 +67,10 @@ import '../../features/voice/data/repositories/ingredient_extraction_repository_
 import '../../features/voice/data/repositories/speech_repository_impl.dart';
 import '../../features/voice/domain/repositories/ingredient_extraction_repository.dart';
 import '../../features/voice/domain/repositories/speech_repository.dart';
+import '../../features/voice/domain/services/audio_recorder_service.dart';
 import '../../features/voice/domain/usecases/apply_voice_correction.dart';
 import '../../features/voice/domain/usecases/confirm_ingredients.dart';
+import '../../features/voice/domain/usecases/extract_ingredients_from_audio.dart';
 import '../../features/voice/domain/usecases/extract_ingredients_from_transcript.dart';
 import '../../features/voice/presentation/bloc/voice_input_bloc.dart';
 import '../config/app_config.dart';
@@ -293,6 +301,11 @@ Future<void> configureDependencies({
       ResolveExpiryPhrase.new,
     );
   }
+  if (!sl.isRegistered<WatchActiveIngredients>()) {
+    sl.registerLazySingleton<WatchActiveIngredients>(
+      () => WatchActiveIngredients(sl<IngredientRepository>()),
+    );
+  }
 
   // Inventory Cubit
   if (!sl.isRegistered<InventoryCubit>()) {
@@ -350,7 +363,22 @@ Future<void> configureDependencies({
     );
   }
 
+  // Audio Recorder Service
+  if (!sl.isRegistered<AudioRecorderService>()) {
+    sl.registerLazySingleton<AudioRecorderService>(
+      () => AudioRecorderServiceImpl(),
+    );
+  }
+
   // Voice Input Use Cases
+  if (!sl.isRegistered<ExtractIngredientsFromAudio>()) {
+    sl.registerLazySingleton<ExtractIngredientsFromAudio>(
+      () => ExtractIngredientsFromAudio(
+        remoteDataSource: sl<GeminiRemoteDataSource>(),
+        config: sl<AppConfig>(),
+      ),
+    );
+  }
   if (!sl.isRegistered<ExtractIngredientsFromTranscript>()) {
     sl.registerLazySingleton<ExtractIngredientsFromTranscript>(
       () => ExtractIngredientsFromTranscript(
@@ -379,6 +407,8 @@ Future<void> configureDependencies({
         extractIngredients: sl<ExtractIngredientsFromTranscript>(),
         applyVoiceCorrection: sl<ApplyVoiceCorrection>(),
         confirmIngredients: sl<ConfirmIngredients>(),
+        audioRecorderService: sl<AudioRecorderService>(),
+        extractIngredientsFromAudio: sl<ExtractIngredientsFromAudio>(),
       ),
     );
   }
@@ -417,6 +447,14 @@ Future<void> configureDependencies({
   }
 
   // Recipe Use Cases
+  if (!sl.isRegistered<TranslateRecipeContent>()) {
+    sl.registerLazySingleton<TranslateRecipeContent>(
+      () => TranslateRecipeContent(
+        config: sl<AppConfig>(),
+        client: sl<http.Client>(),
+      ),
+    );
+  }
   if (!sl.isRegistered<GenerateRecipes>()) {
     sl.registerLazySingleton<GenerateRecipes>(
       () => GenerateRecipes(
@@ -469,6 +507,16 @@ Future<void> configureDependencies({
     );
   }
 
+  if (!sl.isRegistered<MediaResolver>()) {
+    sl.registerLazySingleton<MediaResolver>(
+      () => MediaResolverImpl(
+        config: sl<AppConfig>(),
+        client: sl<http.Client>(),
+        cacheBox: Hive.isBoxOpen('recipe_cache') ? Hive.box<String>('recipe_cache') : null,
+      ),
+    );
+  }
+
   // Recipes Bloc
   if (!sl.isRegistered<RecipesBloc>()) {
     sl.registerFactory<RecipesBloc>(
@@ -476,6 +524,20 @@ Future<void> configureDependencies({
         generateRecipes: sl<GenerateRecipes>(),
         updateDietPreference: sl<UpdateDietPreference>(),
         savedRecipeRepository: sl<SavedRecipeRepository>(),
+      ),
+    );
+  }
+
+  // Phase 11: Rescue Suggestions Cubit (Singleton single-source-of-truth)
+  if (!sl.isRegistered<RescueSuggestionsCubit>()) {
+    sl.registerLazySingleton<RescueSuggestionsCubit>(
+      () => RescueSuggestionsCubit(
+        watchActiveIngredients: sl<WatchActiveIngredients>(),
+        generateRecipes: sl<GenerateRecipes>(),
+        updateDietPreference: sl<UpdateDietPreference>(),
+        savedRecipeRepository: sl.isRegistered<SavedRecipeRepository>()
+            ? sl<SavedRecipeRepository>()
+            : null,
       ),
     );
   }
@@ -495,8 +557,13 @@ Future<void> configureDependencies({
           VoiceSessionControllerImpl(
             ttsService: sl<TtsService>(),
             speechRepository: sl<SpeechRepository>(),
+            ttsVoiceManager: sl.isRegistered<TtsVoiceManager>() ? sl<TtsVoiceManager>() : null,
           ),
     );
+  }
+
+  if (!sl.isRegistered<TtsVoiceManager>()) {
+    sl.registerLazySingleton<TtsVoiceManager>(TtsVoiceManager.new);
   }
 
   // Phase 5: Cooking Use Cases
@@ -532,6 +599,12 @@ Future<void> configureDependencies({
         computeInventoryDeduction: sl<ComputeInventoryDeduction>(),
         finishCooking: sl<FinishCooking>(),
         voiceController: sl<VoiceSessionController>(),
+        translateRecipeContent: sl.isRegistered<TranslateRecipeContent>()
+            ? sl<TranslateRecipeContent>()
+            : null,
+        ttsVoiceManager: sl.isRegistered<TtsVoiceManager>()
+            ? sl<TtsVoiceManager>()
+            : null,
       ),
     );
   }

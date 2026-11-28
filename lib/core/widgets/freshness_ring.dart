@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../domain/expiry_priority.dart';
@@ -12,12 +13,14 @@ class FreshnessRing extends StatelessWidget {
     super.key,
     required this.daysLeft,
     this.ingredientName,
+    this.photoUrl,
     this.maxDays = 7,
     this.size = AppSizes.ring,
   });
 
   final int? daysLeft;
   final String? ingredientName;
+  final String? photoUrl;
   final int maxDays;
   final double size;
 
@@ -92,11 +95,26 @@ class FreshnessRing extends StatelessWidget {
               ),
               child: Center(
                 child: SizedBox(
-                  width: size * 0.6,
-                  height: size * 0.6,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: Text(emoji),
+                  width: size * 0.62,
+                  height: size * 0.62,
+                  child: ClipOval(
+                    child: (photoUrl != null && photoUrl!.isNotEmpty)
+                        ? CachedNetworkImage(
+                            imageUrl: photoUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => FittedBox(
+                              fit: BoxFit.contain,
+                              child: Text(emoji),
+                            ),
+                            errorWidget: (_, __, ___) => FittedBox(
+                              fit: BoxFit.contain,
+                              child: Text(emoji),
+                            ),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.contain,
+                            child: Text(emoji),
+                          ),
                   ),
                 ),
               ),

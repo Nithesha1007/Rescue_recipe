@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/voice_orb.dart';
+import '../../../recipes/domain/entities/diet_tag.dart';
+import '../../../settings/domain/entities/user_preferences.dart';
 import '../../../settings/presentation/cubit/settings_cubit.dart';
 import 'app_shell.dart';
 
@@ -31,10 +34,13 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   }
 
   Future<void> _navigateAfterDelay() async {
-    await Future.delayed(const Duration(milliseconds: 1300));
+    final prefs = context.read<SettingsCubit>().state.preferences;
+    final isReducedMotion = prefs.reduceMotion;
+    final delay = isReducedMotion ? const Duration(milliseconds: 150) : const Duration(milliseconds: 1200);
+
+    await Future.delayed(delay);
     if (!mounted) return;
 
-    final prefs = context.read<SettingsCubit>().state.preferences;
     if (prefs.hasCompletedOnboarding) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const AppShell()),
@@ -87,7 +93,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   }
 }
 
-/// 3-page swipeable onboarding explaining permissions and food rescue.
+/// 4-step guided onboarding flow with skip and live preference configuration.
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
 
@@ -101,20 +107,47 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool _micAllowed = false;
   bool _notifsAllowed = false;
 
-  void _finishOnboarding() {
-    final cubit = context.read<SettingsCubit>();
-    final current = cubit.state.preferences;
-    cubit.updatePreferences(current.copyWith(hasCompletedOnboarding: true));
+  late VoiceInputLanguage _voiceLang;
+  late GuideLanguage _guideLang;
+  late DietTag _diet;
+  int _householdSize = 2;
+  late final TextEditingController _nameController;
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AppShell()),
-    );
+  @override
+  void initState() {
+    super.initState();
+    final prefs = context.read<SettingsCubit>().state.preferences;
+    _voiceLang = prefs.voiceInputLanguage;
+    _guideLang = prefs.guideLanguage;
+    _diet = prefs.diet;
+    _householdSize = prefs.householdSize;
+    _nameController = TextEditingController(text: prefs.displayName);
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _nameController.dispose();
     super.dispose();
+  }
+
+  void _finishOnboarding() {
+    final cubit = context.read<SettingsCubit>();
+    final current = cubit.state.preferences;
+    final name = _nameController.text.trim();
+
+    cubit.updatePreferences(current.copyWith(
+      hasCompletedOnboarding: true,
+      voiceInputLanguage: _voiceLang,
+      guideLanguage: _guideLang,
+      diet: _diet,
+      householdSize: _householdSize,
+      displayName: name.isNotEmpty ? name : 'Food Rescuer',
+    ));
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const AppShell()),
+    );
   }
 
   @override
@@ -138,16 +171,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 controller: _pageController,
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 children: [
-                  _buildPage(
-                    emoji: '🎙️',
-                    title: 'Speak Your Ingredients',
-                    subtitle: 'Just tap the mic and say what is in your fridge or pantry. Natural language handles quantities, units, and expiry dates.',
-                  ),
-                  _buildPage(
-                    emoji: '⏳',
-                    title: 'Rescue What Expires First',
-                    subtitle: 'Rescue-First ranking prioritizes dishes using items about to expire, helping you reduce waste and save money.',
-                  ),
+                  _buildLanguagePage(),
+                  _buildProfilePage(),
+                  _buildHowItWorksPage(),
                   _buildPermissionsPage(),
                 ],
               ),
@@ -159,7 +185,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 children: [
                   Row(
                     children: List.generate(
-                      3,
+                      4,
                       (index) => Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         width: _currentPage == index ? 24 : 8,
@@ -171,7 +197,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                     ),
                   ),
-                  if (_currentPage < 2)
+                  if (_currentPage < 3)
                     AppButton(
                       label: 'Next',
                       variant: AppButtonVariant.filled,
@@ -197,45 +223,259 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
-  Widget _buildPage({
-    required String emoji,
-    required String title,
-    required String subtitle,
-  }) {
+  Widget _buildLanguagePage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: context.colors.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Text('🌐', style: AppTypography.displayEmoji),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Choose Your Languages',
+            textAlign: TextAlign.center,
+            style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Speak naturally in Tamil, Hindi, or English. RescueRecipe understands all three.',
+            textAlign: TextAlign.center,
+            style: context.text.bodyMedium?.copyWith(color: context.colors.onSurfaceVariant),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Voice Input Mode', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: AppSpacing.xs),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<VoiceInputLanguage>(
+                    isExpanded: true,
+                    value: _voiceLang,
+                    items: const [
+                      DropdownMenuItem(
+                        value: VoiceInputLanguage.auto,
+                        child: Text('Auto (AI) - Tamil, Hindi, English, Mixed'),
+                      ),
+                      DropdownMenuItem(
+                        value: VoiceInputLanguage.english,
+                        child: Text('Live - English (India)'),
+                      ),
+                      DropdownMenuItem(
+                        value: VoiceInputLanguage.tamil,
+                        child: Text('Live - Tamil (தமிழ்)'),
+                      ),
+                      DropdownMenuItem(
+                        value: VoiceInputLanguage.hindi,
+                        child: Text('Live - Hindi (हिंदी)'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setState(() => _voiceLang = val);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Cooking Guide Language', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: AppSpacing.xs),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<GuideLanguage>(
+                    isExpanded: true,
+                    value: _guideLang,
+                    items: const [
+                      DropdownMenuItem(value: GuideLanguage.english, child: Text('English')),
+                      DropdownMenuItem(value: GuideLanguage.tamil, child: Text('Tamil (தமிழ்)')),
+                      DropdownMenuItem(value: GuideLanguage.hindi, child: Text('Hindi (हिंदी)')),
+                      DropdownMenuItem(value: GuideLanguage.tanglish, child: Text('Tanglish (Tamil in English)')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setState(() => _guideLang = val);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfilePage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: context.colors.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Text('🧑‍🍳', style: AppTypography.displayEmoji),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Your Kitchen Profile',
+            textAlign: TextAlign.center,
+            style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Customize your dietary needs and household size for perfectly portioned recipes.',
+            textAlign: TextAlign.center,
+            style: context.text.bodyMedium?.copyWith(color: context.colors.onSurfaceVariant),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'What should we call you?',
+              hintText: 'Enter your name',
+              prefixIcon: Icon(Icons.person_outline_rounded),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Dietary Restrictions', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: DietTag.values.map((tag) {
+                    final isSel = _diet == tag;
+                    return ChoiceChip(
+                      label: Text(tag.displayName),
+                      selected: isSel,
+                      selectedColor: AppColors.orange,
+                      labelStyle: TextStyle(
+                        color: isSel ? AppColors.white : null,
+                        fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      onSelected: (selected) {
+                        if (selected) setState(() => _diet = tag);
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Household Size', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline_rounded),
+                      onPressed: _householdSize > 1 ? () => setState(() => _householdSize--) : null,
+                    ),
+                    Text('$_householdSize', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                      onPressed: _householdSize < 10 ? () => setState(() => _householdSize++) : null,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHowItWorksPage() {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 120,
-            height: 120,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
               color: context.colors.primaryContainer,
               shape: BoxShape.circle,
             ),
-            child: Center(
-              child: Text(emoji, style: AppTypography.displayEmoji),
+            child: const Center(
+              child: Text('🌱', style: AppTypography.displayEmoji),
             ),
           ),
-          const SizedBox(height: AppSpacing.xxl),
+          const SizedBox(height: AppSpacing.xl),
           Text(
-            title,
+            'Rescue Food in 3 Steps',
             textAlign: TextAlign.center,
-            style: context.text.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _buildStepRow('1', 'Speak Ingredients', 'Say items in plain words with natural expiry phrases like "use in 3 days".'),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: context.text.bodyLarge?.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
-          ),
+          _buildStepRow('2', 'Rescue-First Ranking', '0ms local pure Dart algorithm ranks recipes that save your most critical food first.'),
+          const SizedBox(height: AppSpacing.md),
+          _buildStepRow('3', 'Cook Hands-Free', 'Step-by-step guidance recites exact quantities and responds to voice commands.'),
         ],
       ),
+    );
+  }
+
+  Widget _buildStepRow(String number, String title, String description) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.orange,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            number,
+            style: const TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(description, style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -249,7 +489,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             const Text('🍳', style: AppTypography.displayEmoji),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Cook Hands-Free',
+              'Ready to Cook!',
               textAlign: TextAlign.center,
               style: context.text.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
@@ -257,7 +497,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Hands covered in flour? Use voice commands like "next", "repeat", or "start timer". Granting permissions is optional.',
+              'Granting permissions enables voice recording and timely expiry reminders. You can adjust these anytime in settings.',
               textAlign: TextAlign.center,
               style: context.text.bodyMedium?.copyWith(
                 color: context.colors.onSurfaceVariant,

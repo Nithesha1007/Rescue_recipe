@@ -31,6 +31,7 @@ class Recipe extends Equatable {
     this.difficulty = 'Easy',
     this.tips = const <String>[],
     this.imageQuery,
+    this.videoSearchQuery,
   });
 
   final String id;
@@ -47,6 +48,7 @@ class Recipe extends Equatable {
   final String difficulty;
   final List<String> tips;
   final String? imageQuery;
+  final String? videoSearchQuery;
 
   @override
   List<Object?> get props => [
@@ -64,6 +66,7 @@ class Recipe extends Equatable {
         difficulty,
         tips,
         imageQuery,
+        videoSearchQuery,
       ];
 
   Recipe copyWith({
@@ -81,6 +84,7 @@ class Recipe extends Equatable {
     String? difficulty,
     List<String>? tips,
     String? imageQuery,
+    String? videoSearchQuery,
   }) {
     return Recipe(
       id: id ?? this.id,
@@ -97,6 +101,7 @@ class Recipe extends Equatable {
       difficulty: difficulty ?? this.difficulty,
       tips: tips ?? this.tips,
       imageQuery: imageQuery ?? this.imageQuery,
+      videoSearchQuery: videoSearchQuery ?? this.videoSearchQuery,
     );
   }
 }

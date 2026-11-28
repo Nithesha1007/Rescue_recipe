@@ -80,6 +80,8 @@ class FakeUsageLogRepo implements UsageLogRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('CookingBloc', () {
     late CookingBloc bloc;
     late FakeIngredientRepository ingredientRepo;

@@ -68,10 +68,11 @@ class _WeeklyBarChartState extends State<WeeklyBarChart>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Accessibility / alternative table view toggle
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton.icon(
+        Align(
+          alignment: Alignment.centerRight,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: TextButton.icon(
               icon: Icon(
                 _showTable ? Icons.bar_chart_rounded : Icons.table_chart_outlined,
                 size: AppSizes.iconSm,
@@ -83,7 +84,7 @@ class _WeeklyBarChartState extends State<WeeklyBarChart>
                 });
               },
             ),
-          ],
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         if (_showTable)

@@ -10,6 +10,7 @@ import '../entities/diet_tag.dart';
 import '../entities/ranked_recipe.dart';
 import '../entities/recipe.dart';
 import '../repositories/recipe_repository.dart';
+import '../services/recipe_exclusion_filter.dart';
 import '../utils/rescue_first_ranker.dart';
 
 class GenerateRecipesParams extends Equatable {
@@ -18,15 +19,26 @@ class GenerateRecipesParams extends Equatable {
     this.cuisinePreference = CuisineTag.any,
     this.forceRefresh = false,
     this.today,
+    this.allergens = const [],
+    this.dislikedIngredients = const [],
   });
 
   final DietTag? dietPreference;
   final CuisineTag cuisinePreference;
   final bool forceRefresh;
   final DateTime? today;
+  final List<String> allergens;
+  final List<String> dislikedIngredients;
 
   @override
-  List<Object?> get props => [dietPreference, cuisinePreference, forceRefresh, today];
+  List<Object?> get props => [
+        dietPreference,
+        cuisinePreference,
+        forceRefresh,
+        today,
+        allergens,
+        dislikedIngredients,
+      ];
 }
 
 class GenerateRecipesResult extends Equatable {
@@ -114,9 +126,16 @@ class GenerateRecipes
         );
 
         return recipeCandidatesResult.map((result) {
+          // Filter candidate recipes against active allergens and disliked ingredients
+          final safeRecipes = RecipeExclusionFilter.filterRecipes(
+            result.recipes,
+            allergens: params.allergens,
+            dislikedIngredients: params.dislikedIngredients,
+          );
+
           // 5. Rank recipes with Rescue-First Ranker (pure Dart)
           final ranked = RescueFirstRanker.rank(
-            recipes: result.recipes,
+            recipes: safeRecipes,
             inventory: validIngredients,
             dietPreference: diet,
             cuisinePreference: params.cuisinePreference,

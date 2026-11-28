@@ -10,12 +10,13 @@ sealed class VoiceInputEvent extends Equatable {
 }
 
 class StartListening extends VoiceInputEvent {
-  const StartListening({this.localeId});
+  const StartListening({this.localeId, this.isAutoMode = false});
 
   final String? localeId;
+  final bool isAutoMode;
 
   @override
-  List<Object?> get props => [localeId];
+  List<Object?> get props => [localeId, isAutoMode];
 }
 
 class StopListening extends VoiceInputEvent {
@@ -35,6 +36,24 @@ class SpeechUpdateReceived extends VoiceInputEvent {
 
   @override
   List<Object?> get props => [transcript, soundLevel, isFinal];
+}
+
+class AudioRecordingAmplitudeReceived extends VoiceInputEvent {
+  const AudioRecordingAmplitudeReceived(this.soundLevel);
+
+  final double soundLevel;
+
+  @override
+  List<Object?> get props => [soundLevel];
+}
+
+class AudioRecordingFinished extends VoiceInputEvent {
+  const AudioRecordingFinished(this.filePath);
+
+  final String filePath;
+
+  @override
+  List<Object?> get props => [filePath];
 }
 
 class TranscriptChanged extends VoiceInputEvent {
@@ -73,12 +92,12 @@ class EditExtractedItem extends VoiceInputEvent {
 }
 
 class ApplyCorrectionText extends VoiceInputEvent {
-  const ApplyCorrectionText(this.correctionText);
+  const ApplyCorrectionText(this.correction);
 
-  final String correctionText;
+  final String correction;
 
   @override
-  List<Object?> get props => [correctionText];
+  List<Object?> get props => [correction];
 }
 
 class ConfirmAllIngredients extends VoiceInputEvent {

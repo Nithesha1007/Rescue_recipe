@@ -53,7 +53,7 @@ void main() {
       final items = await dataSource.extractIngredients('test transcript');
 
       expect(items.length, 2);
-      expect(items[0].name, 'tomatoes');
+      expect(items[0].name, 'tomato');
       expect(items[0].quantity, 3.0);
       expect(items[0].expiryPhrase, 'tomorrow');
       expect(items[1].name, 'spinach');
@@ -142,9 +142,9 @@ void main() {
       final items = await dataSource.extractIngredients('test');
 
       expect(items.length, 2);
-      expect(items[0].name, 'potatoes');
+      expect(items[0].name, 'potato');
       expect(items[0].quantity, isNull); // Clamped negative
-      expect(items[1].name, 'carrots');
+      expect(items[1].name, 'carrot');
       expect(items[1].quantity, isNull); // Clamped > 10000
     });
 
@@ -197,7 +197,7 @@ void main() {
 
       expect(attempts, 2);
       expect(items.length, 1);
-      expect(items[0].name, 'onions');
+      expect(items[0].name, 'onion');
     });
   });
 }

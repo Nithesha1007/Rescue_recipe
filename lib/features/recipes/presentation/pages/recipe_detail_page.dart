@@ -8,11 +8,16 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/expiry_disclaimer.dart';
 import '../../../../core/widgets/responsive_builder.dart';
 import '../../../cooking/presentation/pages/cooking_page.dart';
+import '../../../cooking/presentation/widgets/language_chip_switcher.dart';
+import '../../../settings/domain/entities/user_preferences.dart';
 import '../../data/datasources/saved_recipe_repository.dart';
 import '../../domain/entities/ranked_recipe.dart';
 import '../../domain/entities/recipe.dart';
 import '../../domain/entities/recipe_ingredient.dart';
 import '../../domain/services/dish_image_resolver.dart';
+import '../../domain/services/step_ingredient_linker.dart';
+import '../../domain/services/video_cooking_helper.dart';
+import '../../domain/usecases/translate_recipe_content.dart';
 import '../../domain/utils/servings_scaler.dart';
 import '../widgets/recipe_image.dart';
 
@@ -33,6 +38,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   late Recipe _currentRecipe;
   String? _photoUrl;
   bool _isSaved = false;
+  GuideLanguage _selectedLanguage = GuideLanguage.english;
+  bool _isTranslating = false;
 
   @override
   void initState() {
@@ -175,6 +182,60 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                           color: scheme.onSurfaceVariant,
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.sm),
+
+                      // Language Switcher Chips
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: [
+                          Text('Language: ', style: text.labelSmall),
+                          LanguageChipSwitcher(
+                            selectedLanguage: _selectedLanguage,
+                            onLanguageSelected: (lang) async {
+                              if (lang == _selectedLanguage || _isTranslating) return;
+                              setState(() {
+                                _selectedLanguage = lang;
+                                _isTranslating = true;
+                              });
+
+                              if (lang == GuideLanguage.english) {
+                                setState(() {
+                                  _currentRecipe = ServingsScaler.scaleRecipe(
+                                    widget.rankedRecipe.recipe,
+                                    _targetServings,
+                                  );
+                                  _isTranslating = false;
+                                });
+                              } else if (sl.isRegistered<TranslateRecipeContent>()) {
+                                final translator = sl<TranslateRecipeContent>();
+                                final translated = await translator.execute(
+                                  recipe: widget.rankedRecipe.recipe,
+                                  targetLanguage: lang,
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _currentRecipe = ServingsScaler.scaleRecipe(
+                                      translated,
+                                      _targetServings,
+                                    );
+                                    _isTranslating = false;
+                                  });
+                                }
+                              } else {
+                                setState(() => _isTranslating = false);
+                              }
+                            },
+                          ),
+                          if (_isTranslating)
+                            const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                        ],
+                      ),
                       const SizedBox(height: AppSpacing.md),
 
                       // Pill Facts: 4 equal tiles (time, servings, difficulty, cuisine)
@@ -207,7 +268,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                       _buildStepsSection(context),
                       const SizedBox(height: AppSpacing.xl),
 
-                      // Large orange Start Cooking Button
+                       // Large orange Start Cooking Button
                       AppButton(
                         label: 'Start cooking',
                         icon: Icons.play_arrow,
@@ -220,6 +281,28 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                               builder: (_) => CookingPage(recipe: _currentRecipe),
                             ),
                           );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+
+                      // Video Help Button
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.play_circle_outline_rounded, color: AppColors.critical),
+                        label: const Text('Watch video on YouTube'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(44),
+                          side: BorderSide(color: scheme.outlineVariant),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                          ),
+                        ),
+                        onPressed: () {
+                          final query = VideoCookingHelper.buildDishVideoQuery(
+                            dishTitle: _currentRecipe.title,
+                            customQuery: _currentRecipe.videoSearchQuery,
+                            guideLanguage: _selectedLanguage,
+                          );
+                          VideoCookingHelper.launchYouTubeSearch(query);
                         },
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -624,6 +707,67 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(steps[i].text, style: text.bodyMedium),
+
+                // Ingredients for this step chips
+                Builder(
+                  builder: (_) {
+                    final stepIngredients = StepIngredientLinker.linkIngredientsForStep(
+                      step: steps[i],
+                      recipeIngredients: _currentRecipe.ingredients,
+                    );
+                    if (stepIngredients.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: stepIngredients.map((ing) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.orange.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(color: AppColors.orange.withValues(alpha: 0.25)),
+                            ),
+                            child: Text(
+                              StepIngredientLinker.formatChipLabel(ing),
+                              style: text.labelSmall?.copyWith(
+                                color: AppColors.orangeDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
+                ),
+
+                // How-to video technique chips
+                Builder(
+                  builder: (_) {
+                    final techniques = VideoCookingHelper.findTechniquesInStep(steps[i].text);
+                    if (techniques.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: techniques.map((tech) {
+                          return ActionChip(
+                            avatar: const Icon(Icons.ondemand_video_rounded, size: 14, color: AppColors.critical),
+                            label: Text('How to ${tech.verb}'),
+                            labelStyle: text.labelSmall,
+                            onPressed: () {
+                              VideoCookingHelper.launchYouTubeSearch(tech.query);
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
+                ),
+
                 if (steps[i].tip != null && steps[i].tip!.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Chip(

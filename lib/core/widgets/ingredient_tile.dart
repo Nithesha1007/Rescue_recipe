@@ -13,6 +13,9 @@ class IngredientTile extends StatelessWidget {
     required this.quantityLabel,
     required this.priority,
     required this.daysLeft,
+    this.photoUrl,
+    this.storageIcon,
+    this.onAddExpiry,
     this.onTap,
     this.trailing,
   });
@@ -21,6 +24,9 @@ class IngredientTile extends StatelessWidget {
   final String quantityLabel;
   final ExpiryPriority priority;
   final int? daysLeft;
+  final String? photoUrl;
+  final String? storageIcon;
+  final VoidCallback? onAddExpiry;
   final VoidCallback? onTap;
   final Widget? trailing;
 
@@ -53,6 +59,7 @@ class IngredientTile extends StatelessWidget {
                       FreshnessRing(
                         daysLeft: daysLeft,
                         ingredientName: name,
+                        photoUrl: photoUrl,
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
@@ -60,13 +67,23 @@ class IngredientTile extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              name,
-                              style: text.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    style: text.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (storageIcon != null) ...[
+                                  const SizedBox(width: AppSpacing.xs),
+                                  Text(storageIcon!, style: const TextStyle(fontSize: 14)),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -78,10 +95,27 @@ class IngredientTile extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: AppSpacing.xs),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: PriorityChip(priority: priority, dense: true),
+                            Wrap(
+                              spacing: AppSpacing.xs,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                PriorityChip(priority: priority, dense: true),
+                                if (daysLeft == null && onAddExpiry != null)
+                                  InkWell(
+                                    onTap: onAddExpiry,
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      child: Text(
+                                        '+ Add expiry',
+                                        style: text.labelSmall?.copyWith(
+                                          color: AppColors.orange,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),

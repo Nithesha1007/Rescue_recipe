@@ -162,6 +162,7 @@ void main() {
 
     // Verify Weekly Chart can toggle to Table View
     expect(find.text('Show as table'), findsOneWidget);
+    await tester.ensureVisible(find.text('Show as table'));
     await tester.tap(find.text('Show as table'));
     await tester.pumpAndSettle();
 

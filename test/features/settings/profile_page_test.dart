@@ -20,6 +20,7 @@ import 'package:rescue_recipe/features/settings/domain/usecases/update_settings.
 import 'package:rescue_recipe/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:rescue_recipe/features/settings/presentation/pages/profile_page.dart';
 import 'package:rescue_recipe/features/voice/data/datasources/gemini_remote_datasource.dart';
+import 'package:rescue_recipe/features/voice/domain/entities/audio_extraction_result.dart';
 import 'package:rescue_recipe/features/voice/domain/entities/extracted_ingredient.dart';
 
 class _FakeTtsService implements TtsService {
@@ -54,6 +55,16 @@ class _FakeGeminiRemoteDataSource implements GeminiRemoteDataSource {
   AiStatus get lastStatus => const AiStatus(state: AiConnectionState.ok);
   @override
   Future<List<ExtractedIngredient>> extractIngredients(String transcript) async => [];
+  @override
+  Future<AudioExtractionResult> extractFromAudio({
+    required List<int> audioBytes,
+    required String mimeType,
+  }) async =>
+      const AudioExtractionResult(
+        transcript: '',
+        detectedLanguage: 'en',
+        ingredients: [],
+      );
   @override
   Future<AiStatus> testConnection() async => const AiStatus(state: AiConnectionState.ok);
 }

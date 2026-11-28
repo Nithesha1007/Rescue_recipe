@@ -12,6 +12,7 @@ class IngredientModel {
     required this.addedAt,
     this.status = 'active',
     this.statusChangedAt,
+    this.storage = 'pantry',
   });
 
   final String id;
@@ -22,6 +23,7 @@ class IngredientModel {
   final DateTime addedAt;
   final String status;
   final DateTime? statusChangedAt;
+  final String storage;
 
   factory IngredientModel.fromEntity(Ingredient entity) {
     return IngredientModel(
@@ -33,6 +35,7 @@ class IngredientModel {
       addedAt: entity.addedAt,
       status: entity.status.name,
       statusChangedAt: entity.statusChangedAt,
+      storage: entity.storage.name,
     );
   }
 
@@ -41,6 +44,12 @@ class IngredientModel {
       'used' => IngredientStatus.used,
       'discarded' => IngredientStatus.discarded,
       _ => IngredientStatus.active,
+    };
+
+    final StorageLocation parsedStorage = switch (storage) {
+      'fridge' => StorageLocation.fridge,
+      'freezer' => StorageLocation.freezer,
+      _ => StorageLocation.pantry,
     };
 
     return Ingredient(
@@ -52,6 +61,7 @@ class IngredientModel {
       addedAt: addedAt,
       status: parsedStatus,
       statusChangedAt: statusChangedAt,
+      storage: parsedStorage,
     );
   }
 
@@ -64,6 +74,7 @@ class IngredientModel {
     DateTime? addedAt,
     String? status,
     DateTime? Function()? statusChangedAt,
+    String? storage,
   }) {
     return IngredientModel(
       id: id ?? this.id,
@@ -75,6 +86,7 @@ class IngredientModel {
       status: status ?? this.status,
       statusChangedAt:
           statusChangedAt != null ? statusChangedAt() : this.statusChangedAt,
+      storage: storage ?? this.storage,
     );
   }
 }
@@ -107,13 +119,14 @@ class IngredientModelAdapter extends TypeAdapter<IngredientModel> {
       statusChangedAt: fields[7] != null
           ? DateTime.fromMillisecondsSinceEpoch(fields[7] as int)
           : null,
+      storage: fields[8] as String? ?? 'pantry',
     );
   }
 
   @override
   void write(BinaryWriter writer, IngredientModel obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -129,6 +142,8 @@ class IngredientModelAdapter extends TypeAdapter<IngredientModel> {
       ..writeByte(6)
       ..write(obj.status)
       ..writeByte(7)
-      ..write(obj.statusChangedAt?.millisecondsSinceEpoch);
+      ..write(obj.statusChangedAt?.millisecondsSinceEpoch)
+      ..writeByte(8)
+      ..write(obj.storage);
   }
 }

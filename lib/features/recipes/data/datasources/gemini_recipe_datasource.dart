@@ -109,7 +109,10 @@ class GeminiRecipeDataSourceImpl implements GeminiRecipeDataSource {
         'Each step MUST be a single, short, clear sentence suitable for reading aloud, and may include an optional concise cooking tip. '
         'Do NOT mention expiry dates, days left, safety, healthiness, or food freshness in titles, steps, or whyRecommended. '
         'Provide an honest array of dietTags (e.g. vegetarian, vegan, eggFree, dairyFree, glutenFree, nonVegetarian). '
-        'Include dish-level tips (e.g., storage advice, serving suggestions) and assign appropriate cuisine category (e.g. South Indian, North Indian, Continental, Chinese-style, Quick snacks). '
+        'Provide dish-level tips and assign appropriate cuisine category. '
+        'For EVERY preparation step in "steps", you MUST specify "uses" (array of ingredient names used in that step) '
+        'and the step text MUST state the exact quantity and unit for every ingredient it uses (taken from the ingredients list, e.g. "Add 2 diced tomatoes and 1 tbsp of olive oil"). '
+        'Provide a "videoSearchQuery" string optimized for finding cooking videos (e.g. "tomato spinach scramble recipe"). '
         'Output MUST be a JSON array of recipe objects adhering strictly to the schema.';
 
     final userContent = jsonEncode({
@@ -144,6 +147,7 @@ class GeminiRecipeDataSourceImpl implements GeminiRecipeDataSource {
               'servings': {'type': 'INTEGER'},
               'difficulty': {'type': 'STRING'},
               'cuisine': {'type': 'STRING'},
+              'videoSearchQuery': {'type': 'STRING'},
               'tips': {
                 'type': 'ARRAY',
                 'items': {'type': 'STRING'}
@@ -173,7 +177,11 @@ class GeminiRecipeDataSourceImpl implements GeminiRecipeDataSource {
                   'properties': {
                     'text': {'type': 'STRING'},
                     'minutes': {'type': 'INTEGER'},
-                    'tip': {'type': 'STRING'}
+                    'tip': {'type': 'STRING'},
+                    'uses': {
+                      'type': 'ARRAY',
+                      'items': {'type': 'STRING'}
+                    }
                   },
                   'required': ['text']
                 }
@@ -252,6 +260,7 @@ class GeminiRecipeDataSourceImpl implements GeminiRecipeDataSource {
         final servings = item['servings'] as num?;
         final difficulty = (item['difficulty'] as String?)?.trim() ?? 'Easy';
         final cuisine = (item['cuisine'] as String?)?.trim();
+        final videoSearchQuery = (item['videoSearchQuery'] as String?)?.trim();
         final rawTips = item['tips'] as List<dynamic>?;
         final rawDietTags = item['dietTags'] as List<dynamic>?;
         final rawIngredients = item['ingredients'] as List<dynamic>?;
@@ -303,11 +312,22 @@ class GeminiRecipeDataSourceImpl implements GeminiRecipeDataSource {
           if (stepText == null || stepText.isEmpty) continue;
           final stepMinutes = st['minutes'] as num?;
           final stepTip = (st['tip'] as String?)?.trim();
+          final rawUses = st['uses'] as List<dynamic>?;
+          final List<String> uses = <String>[];
+          if (rawUses != null) {
+            for (final u in rawUses) {
+              final str = u?.toString().trim();
+              if (str != null && str.isNotEmpty) {
+                uses.add(str);
+              }
+            }
+          }
 
           steps.add(RecipeStep(
             text: stepText,
             minutes: stepMinutes?.toInt(),
             tip: stepTip?.isNotEmpty == true ? stepTip : null,
+            uses: uses,
           ));
         }
 
@@ -354,6 +374,8 @@ class GeminiRecipeDataSourceImpl implements GeminiRecipeDataSource {
           substitutions: substitutions,
           aiReason: whyRecommended,
           source: RecipeSource.gemini,
+          imageQuery: title,
+          videoSearchQuery: videoSearchQuery,
         ));
       }
 

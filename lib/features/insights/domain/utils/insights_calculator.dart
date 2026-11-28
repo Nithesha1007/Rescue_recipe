@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../../../../core/domain/ingredient_emoji.dart';
 import '../../../../core/widgets/weekly_bar_chart.dart';
 import '../../../cooking/domain/entities/usage_log_entry.dart';
 import '../entities/achievement.dart';
@@ -60,6 +61,65 @@ class InsightsCalculator {
     // Weekly chart (last 7 calendar days ending today, oldest first)
     final weeklyActivity = _calculateWeeklyActivity(entriesByDate, normalizedToday);
 
+    // Week over week rescued counts
+    int rescuedThisWeek = 0;
+    int rescuedLastWeek = 0;
+    for (int i = 0; i < 7; i++) {
+      final dThis = normalizedToday.subtract(Duration(days: i));
+      final entriesThis = entriesByDate[dThis] ?? [];
+      rescuedThisWeek += entriesThis.where((e) => e.wasRescued).length;
+
+      final dLast = normalizedToday.subtract(Duration(days: i + 7));
+      final entriesLast = entriesByDate[dLast] ?? [];
+      rescuedLastWeek += entriesLast.where((e) => e.wasRescued).length;
+    }
+
+    // 28-day streak calendar (oldest first, days -27 to day 0)
+    final streakCalendar28Days = <bool>[];
+    for (int i = 27; i >= 0; i--) {
+      final date = normalizedToday.subtract(Duration(days: i));
+      final dayEntries = entriesByDate[date] ?? [];
+      final hasActivity = dayEntries.any((e) => e.action == UsageAction.used || e.action == UsageAction.reduced);
+      streakCalendar28Days.add(hasActivity);
+    }
+
+    // Top rescued ingredients
+    final rescuedCounts = <String, int>{};
+    for (final e in entries) {
+      if (e.wasRescued) {
+        final canonical = e.ingredientName.toLowerCase().trim();
+        rescuedCounts[canonical] = (rescuedCounts[canonical] ?? 0) + 1;
+      }
+    }
+    final sortedRescued = rescuedCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topRescuedIngredients = sortedRescued.take(5).map((entry) {
+      return IngredientFrequency(
+        name: entry.key,
+        count: entry.value,
+        emoji: IngredientEmoji.forIngredient(entry.key),
+      );
+    }).toList();
+
+    // Waste watch list (most frequently discarded)
+    final discardedCounts = <String, int>{};
+    for (final e in entries) {
+      if (e.action == UsageAction.discarded) {
+        final canonical = e.ingredientName.toLowerCase().trim();
+        discardedCounts[canonical] = (discardedCounts[canonical] ?? 0) + 1;
+      }
+    }
+    final sortedDiscarded = discardedCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final wasteWatchList = sortedDiscarded.take(4).map((entry) {
+      return IngredientFrequency(
+        name: entry.key,
+        count: entry.value,
+        emoji: IngredientEmoji.forIngredient(entry.key),
+        tip: _rescueTipFor(entry.key),
+      );
+    }).toList();
+
     // Achievements
     final achievements = _calculateAchievements(
       rescuedCount: rescuedCount,
@@ -82,7 +142,29 @@ class InsightsCalculator {
       bestStreak: bestStreak,
       weeklyActivity: weeklyActivity,
       achievements: achievements,
+      rescuedThisWeek: rescuedThisWeek,
+      rescuedLastWeek: rescuedLastWeek,
+      streakCalendar28Days: streakCalendar28Days,
+      topRescuedIngredients: topRescuedIngredients,
+      wasteWatchList: wasteWatchList,
     );
+  }
+
+  static String _rescueTipFor(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('banana')) return 'Peel and freeze in slices for smoothies or baking';
+    if (lower.contains('herb') || lower.contains('coriander') || lower.contains('mint') || lower.contains('spinach')) {
+      return 'Wrap stems in a damp paper towel or freeze in olive oil cubes';
+    }
+    if (lower.contains('bread') || lower.contains('roti')) {
+      return 'Freeze in slices and toast directly from freezer';
+    }
+    if (lower.contains('milk') || lower.contains('curd')) {
+      return 'Freeze in silicone trays or make fresh paneer / buttermilk';
+    }
+    if (lower.contains('tomato')) return 'Simmer into quick marinara sauce or freeze whole';
+    if (lower.contains('potato')) return 'Store in a cool, dark, ventilated bin away from onions';
+    return 'Store in an airtight container or freeze in usable portions';
   }
 
   /// Alias for compute to allow calling calculate(entries, today: ...)

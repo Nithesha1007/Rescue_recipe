@@ -16,6 +16,8 @@ import '../../../../core/widgets/voice_orb.dart';
 import '../../../ingredients/domain/entities/ingredient.dart';
 import '../../../ingredients/presentation/cubit/inventory_cubit.dart';
 import '../../../ingredients/presentation/widgets/ingredient_form_sheet.dart';
+import '../../../settings/domain/entities/user_preferences.dart';
+import '../../../settings/presentation/cubit/settings_cubit.dart';
 import '../../domain/entities/extracted_ingredient.dart';
 import '../bloc/voice_input_bloc.dart';
 import '../bloc/voice_input_event.dart';
@@ -36,35 +38,65 @@ class _VoiceInputPageState extends State<VoiceInputPage> {
   bool _isConfirming = false;
 
   Widget _buildLanguageChipRow(BuildContext context) {
+    VoiceInputLanguage voiceLang = VoiceInputLanguage.auto;
+    try {
+      voiceLang = context.watch<SettingsCubit>().state.preferences.voiceInputLanguage;
+    } catch (_) {}
+    final isAutoAi = voiceLang == VoiceInputLanguage.auto;
+
     const locales = [
       ('en_IN', 'English (India)'),
-      ('en_US', 'English (US)'),
-      ('ta_IN', 'Tamil'),
-      ('hi_IN', 'Hindi'),
+      ('ta_IN', 'Tamil (தமிழ்)'),
+      ('hi_IN', 'Hindi (हिंदी)'),
     ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: locales.map((loc) {
-          final isSelected = _currentLocale == loc.$1;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: ChoiceChip(
-              label: Text(loc.$2, style: AppTypography.chipLabel),
-              selected: isSelected,
-              selectedColor: AppColors.orange,
-              onSelected: (val) {
-                if (val) {
-                  setState(() => _currentLocale = loc.$1);
-                  context.read<VoiceInputBloc>().add(StartListening(localeId: loc.$1));
-                }
-              },
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: isAutoAi ? AppColors.orange.withValues(alpha: 0.15) : Theme.of(context).colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            isAutoAi
+                ? 'Mode: Auto (AI) - Tamil, Hindi, English, Mixed'
+                : 'Mode: Live (On-device speech recognizer)',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isAutoAi ? AppColors.orange : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        if (!isAutoAi)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: locales.map((loc) {
+                final isSelected = _currentLocale == loc.$1;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: ChoiceChip(
+                    label: Text(loc.$2, style: AppTypography.chipLabel),
+                    selected: isSelected,
+                    selectedColor: AppColors.orange,
+                    onSelected: (val) {
+                      if (val) {
+                        setState(() => _currentLocale = loc.$1);
+                        context.read<VoiceInputBloc>().add(StartListening(
+                              localeId: loc.$1,
+                              isAutoMode: false,
+                            ));
+                      }
+                    },
+                  ),
+                );
+              }).toList(),
             ),
-          );
-        }).toList(),
-      ),
+          ),
+      ],
     );
   }
 
@@ -270,7 +302,17 @@ class _VoiceInputPageState extends State<VoiceInputPage> {
               variant: AppButtonVariant.filled,
               onPressed: () {
                 HapticFeedback.lightImpact();
-                context.read<VoiceInputBloc>().add(const StartListening());
+                final prefs = context.read<SettingsCubit>().state.preferences;
+                final isAuto = prefs.voiceInputLanguage == VoiceInputLanguage.auto;
+                final locale = prefs.voiceInputLanguage == VoiceInputLanguage.tamil
+                    ? 'ta_IN'
+                    : (prefs.voiceInputLanguage == VoiceInputLanguage.hindi
+                        ? 'hi_IN'
+                        : _currentLocale);
+                context.read<VoiceInputBloc>().add(StartListening(
+                      localeId: locale,
+                      isAutoMode: isAuto,
+                    ));
               },
             )
           else

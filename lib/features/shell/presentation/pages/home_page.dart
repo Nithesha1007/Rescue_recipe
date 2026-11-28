@@ -22,9 +22,10 @@ import '../../../ingredients/presentation/cubit/inventory_cubit.dart';
 import '../../../ingredients/presentation/cubit/inventory_state.dart';
 import '../../../insights/presentation/cubit/insights_cubit.dart';
 import '../../../insights/presentation/cubit/insights_state.dart';
-import '../../../recipes/presentation/bloc/recipes_bloc.dart';
-import '../../../recipes/presentation/bloc/recipes_state.dart';
+import '../../../recipes/presentation/cubit/rescue_suggestions_cubit.dart';
+import '../../../recipes/presentation/cubit/rescue_suggestions_state.dart';
 import '../../../recipes/presentation/pages/recipe_detail_page.dart';
+import '../../../settings/presentation/cubit/settings_cubit.dart';
 import '../../../voice/presentation/bloc/voice_input_bloc.dart';
 import '../../../voice/presentation/bloc/voice_input_event.dart';
 import '../../../voice/presentation/pages/voice_input_page.dart';
@@ -129,6 +130,10 @@ class _HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final text = context.text;
+    final prefs = context.watch<SettingsCubit>().state.preferences;
+    final greeting = prefs.displayName.isNotEmpty
+        ? 'Hello, ${prefs.displayName} 👋'
+        : AppStrings.appName;
 
     return ClipPath(
       clipper: const WaveClipper(),
@@ -149,7 +154,7 @@ class _HeroHeader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  AppStrings.appName,
+                  greeting,
                   style: text.headlineMedium?.copyWith(
                     fontFamily: AppTypography.headingFont,
                     color: tokens.onHero,
@@ -562,9 +567,9 @@ class _CookThisNowSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<RecipesBloc, RecipesState>(
+    return BlocBuilder<RescueSuggestionsCubit, RescueSuggestionsState>(
       builder: (context, state) {
-        if (state is RecipesLoading) {
+        if (state.isLoading) {
           return const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -578,15 +583,15 @@ class _CookThisNowSection extends StatelessWidget {
           );
         }
 
-        if (state is RecipesLoaded && state.recipes.isNotEmpty) {
-          final topRecipes = state.recipes.take(3).toList();
+        if (state.allRankedPool.isNotEmpty) {
+          final topRecipes = state.allRankedPool.take(3).toList();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SectionHeader(
                 title: 'Cook this now',
                 subtitle: 'Highest rescue-impact recipes using your current food.',
-                actionLabel: 'See all (${state.recipes.length})',
+                actionLabel: 'See all (${state.allRankedPool.length})',
                 onAction: () {
                   context.read<NavigationCubit>().select(NavTab.recipes);
                 },
@@ -595,6 +600,7 @@ class _CookThisNowSection extends StatelessWidget {
               for (int i = 0; i < topRecipes.length; i++) ...[
                 RecipeCard(
                   featured: i == 0,
+                  recipe: topRecipes[i].recipe,
                   title: topRecipes[i].recipe.title,
                   reason: topRecipes[i].reason,
                   minutes: topRecipes[i].recipe.minutes,

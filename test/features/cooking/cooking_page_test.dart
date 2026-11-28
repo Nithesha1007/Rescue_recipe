@@ -21,6 +21,7 @@ import 'package:rescue_recipe/features/ingredients/domain/repositories/ingredien
 import 'package:rescue_recipe/features/recipes/domain/entities/recipe.dart';
 import 'package:rescue_recipe/features/recipes/domain/entities/recipe_ingredient.dart';
 import 'package:rescue_recipe/features/recipes/domain/entities/recipe_step.dart';
+import 'package:rescue_recipe/features/settings/domain/entities/user_preferences.dart';
 
 class MockIngredientRepository implements IngredientRepository {
   @override
@@ -78,6 +79,12 @@ class MockVoiceSessionController implements VoiceSessionController {
 
   @override
   Future<void> startListening({bool isPausedContext = false}) async {}
+
+  @override
+  GuideLanguage get guideLanguage => GuideLanguage.english;
+
+  @override
+  void setGuideLanguage(GuideLanguage language) {}
 
   @override
   Future<void> stopAll() async {}

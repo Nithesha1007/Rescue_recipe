@@ -33,11 +33,33 @@ class OfflineRecipeSource {
         RecipeIngredient(name: 'black pepper', quantity: 0.25, unit: 'tsp', isPantryStaple: true),
       ],
       steps: [
-        RecipeStep(text: 'Dice the tomatoes and roughly chop the spinach.', minutes: 3, tip: 'Remove excess tomato seeds to prevent a watery scramble.'),
-        RecipeStep(text: 'Melt the butter in a non-stick skillet over medium heat.', minutes: 2),
-        RecipeStep(text: 'Add the tomatoes and spinach and sauté until wilted.', minutes: 3),
-        RecipeStep(text: 'Whisk the eggs in a small bowl with salt and pepper.', minutes: 2),
-        RecipeStep(text: 'Pour the eggs into the pan and gently scramble until softly set.', minutes: 5, tip: 'Take off the heat just before fully set, as carryover heat finishes cooking.'),
+        RecipeStep(
+          text: 'Dice 2 tomatoes and roughly chop 100g of fresh spinach.',
+          minutes: 3,
+          tip: 'Remove excess tomato seeds to prevent a watery scramble.',
+          uses: ['tomato', 'spinach'],
+        ),
+        RecipeStep(
+          text: 'Melt 1 tbsp of butter in a non-stick skillet over medium heat.',
+          minutes: 2,
+          uses: ['butter'],
+        ),
+        RecipeStep(
+          text: 'Add the 2 diced tomatoes and 100g chopped spinach, and sauté until tender.',
+          minutes: 3,
+          uses: ['tomato', 'spinach'],
+        ),
+        RecipeStep(
+          text: 'Whisk 3 eggs in a small bowl with 0.5 tsp salt and 0.25 tsp black pepper.',
+          minutes: 2,
+          uses: ['egg', 'salt', 'black pepper'],
+        ),
+        RecipeStep(
+          text: 'Pour the whisked 3 eggs into the pan and gently scramble until softly set.',
+          minutes: 5,
+          tip: 'Take off the heat just before fully set, as carryover heat finishes cooking.',
+          uses: ['egg'],
+        ),
       ],
       substitutions: [
         Substitution(missingIngredient: 'egg', substitute: 'firm tofu', note: 'Crumble and season with turmeric for a plant-based scramble.'),

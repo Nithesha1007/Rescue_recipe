@@ -12,6 +12,16 @@ enum IngredientStatus {
   bool get isDiscarded => this == IngredientStatus.discarded;
 }
 
+enum StorageLocation {
+  fridge('Fridge', '❄️'),
+  freezer('Freezer', '🧊'),
+  pantry('Pantry', '🥫');
+
+  const StorageLocation(this.displayName, this.emoji);
+  final String displayName;
+  final String emoji;
+}
+
 class Ingredient extends Equatable {
   const Ingredient({
     required this.id,
@@ -22,6 +32,7 @@ class Ingredient extends Equatable {
     required this.addedAt,
     this.status = IngredientStatus.active,
     this.statusChangedAt,
+    this.storage = StorageLocation.pantry,
   });
 
   final String id;
@@ -34,6 +45,7 @@ class Ingredient extends Equatable {
   final DateTime addedAt;
   final IngredientStatus status;
   final DateTime? statusChangedAt;
+  final StorageLocation storage;
 
   /// Display name capitalized (e.g. "tomato" -> "Tomato").
   String get displayName {
@@ -73,6 +85,7 @@ class Ingredient extends Equatable {
     DateTime? addedAt,
     IngredientStatus? status,
     DateTime? Function()? statusChangedAt,
+    StorageLocation? storage,
   }) {
     return Ingredient(
       id: id ?? this.id,
@@ -84,6 +97,7 @@ class Ingredient extends Equatable {
       status: status ?? this.status,
       statusChangedAt:
           statusChangedAt != null ? statusChangedAt() : this.statusChangedAt,
+      storage: storage ?? this.storage,
     );
   }
 
@@ -97,5 +111,6 @@ class Ingredient extends Equatable {
         addedAt,
         status,
         statusChangedAt,
+        storage,
       ];
 }

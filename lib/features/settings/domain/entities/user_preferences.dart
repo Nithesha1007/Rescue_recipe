@@ -3,6 +3,46 @@ import 'package:flutter/material.dart';
 import '../../../recipes/domain/entities/diet_tag.dart';
 import 'cuisine_tag.dart';
 
+enum VoiceInputLanguage {
+  auto('Auto (AI)', 'auto'),
+  english('English', 'en_IN'),
+  tamil('Tamil', 'ta_IN'),
+  hindi('Hindi', 'hi_IN');
+
+  const VoiceInputLanguage(this.label, this.localeCode);
+  final String label;
+  final String localeCode;
+}
+
+enum GuideLanguage {
+  english('English', 'en-IN'),
+  tamil('Tamil', 'ta-IN'),
+  hindi('Hindi', 'hi-IN'),
+  tanglish('Tanglish', 'en-IN'); // Tanglish spoken with Indian English TTS
+
+  const GuideLanguage(this.label, this.ttsLocale);
+  final String label;
+  final String ttsLocale;
+}
+
+enum CookingSkill {
+  beginner('Beginner'),
+  intermediate('Intermediate'),
+  expert('Expert');
+
+  const CookingSkill(this.label);
+  final String label;
+}
+
+enum SpiceLevel {
+  mild('Mild 🌶️'),
+  medium('Medium 🌶️🌶️'),
+  hot('Hot 🌶️🌶️🌶️');
+
+  const SpiceLevel(this.label);
+  final String label;
+}
+
 class UserPreferences extends Equatable {
   final DietTag diet;
   final CuisineTag cuisine;
@@ -17,6 +57,20 @@ class UserPreferences extends Equatable {
   final bool notifyDayBefore;
   final bool notifyOnExpiryDay;
   final bool hasCompletedOnboarding;
+  final VoiceInputLanguage voiceInputLanguage;
+  final GuideLanguage guideLanguage;
+
+  // Phase 15 UserProfile additions
+  final String displayName;
+  final String avatarEmoji;
+  final int householdSize;
+  final int defaultServings;
+  final CookingSkill cookingSkill;
+  final SpiceLevel spiceLevel;
+  final List<String> allergens;
+  final List<String> dislikedIngredients;
+  final List<String> preferredCuisines;
+  final bool allowAiIllustration;
 
   const UserPreferences({
     this.diet = DietTag.none,
@@ -32,7 +86,26 @@ class UserPreferences extends Equatable {
     this.notifyDayBefore = true,
     this.notifyOnExpiryDay = true,
     this.hasCompletedOnboarding = false,
+    this.voiceInputLanguage = VoiceInputLanguage.auto,
+    this.guideLanguage = GuideLanguage.english,
+    this.displayName = '',
+    this.avatarEmoji = '🧑‍🍳',
+    this.householdSize = 2,
+    this.defaultServings = 2,
+    this.cookingSkill = CookingSkill.intermediate,
+    this.spiceLevel = SpiceLevel.medium,
+    this.allergens = const <String>[],
+    this.dislikedIngredients = const <String>[],
+    this.preferredCuisines = const <String>[],
+    this.allowAiIllustration = false,
+    this.voiceFeedbackEnabled = true,
+    this.highContrast = false,
+    this.reduceMotion = false,
   });
+
+  final bool voiceFeedbackEnabled;
+  final bool highContrast;
+  final bool reduceMotion;
 
   UserPreferences copyWith({
     DietTag? diet,
@@ -48,6 +121,21 @@ class UserPreferences extends Equatable {
     bool? notifyDayBefore,
     bool? notifyOnExpiryDay,
     bool? hasCompletedOnboarding,
+    VoiceInputLanguage? voiceInputLanguage,
+    GuideLanguage? guideLanguage,
+    String? displayName,
+    String? avatarEmoji,
+    int? householdSize,
+    int? defaultServings,
+    CookingSkill? cookingSkill,
+    SpiceLevel? spiceLevel,
+    List<String>? allergens,
+    List<String>? dislikedIngredients,
+    List<String>? preferredCuisines,
+    bool? allowAiIllustration,
+    bool? voiceFeedbackEnabled,
+    bool? highContrast,
+    bool? reduceMotion,
   }) {
     return UserPreferences(
       diet: diet ?? this.diet,
@@ -63,6 +151,21 @@ class UserPreferences extends Equatable {
       notifyDayBefore: notifyDayBefore ?? this.notifyDayBefore,
       notifyOnExpiryDay: notifyOnExpiryDay ?? this.notifyOnExpiryDay,
       hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
+      voiceInputLanguage: voiceInputLanguage ?? this.voiceInputLanguage,
+      guideLanguage: guideLanguage ?? this.guideLanguage,
+      displayName: displayName ?? this.displayName,
+      avatarEmoji: avatarEmoji ?? this.avatarEmoji,
+      householdSize: householdSize ?? this.householdSize,
+      defaultServings: defaultServings ?? this.defaultServings,
+      cookingSkill: cookingSkill ?? this.cookingSkill,
+      spiceLevel: spiceLevel ?? this.spiceLevel,
+      allergens: allergens ?? this.allergens,
+      dislikedIngredients: dislikedIngredients ?? this.dislikedIngredients,
+      preferredCuisines: preferredCuisines ?? this.preferredCuisines,
+      allowAiIllustration: allowAiIllustration ?? this.allowAiIllustration,
+      voiceFeedbackEnabled: voiceFeedbackEnabled ?? this.voiceFeedbackEnabled,
+      highContrast: highContrast ?? this.highContrast,
+      reduceMotion: reduceMotion ?? this.reduceMotion,
     );
   }
 
@@ -81,5 +184,20 @@ class UserPreferences extends Equatable {
         notifyDayBefore,
         notifyOnExpiryDay,
         hasCompletedOnboarding,
+        voiceInputLanguage,
+        guideLanguage,
+        displayName,
+        avatarEmoji,
+        householdSize,
+        defaultServings,
+        cookingSkill,
+        spiceLevel,
+        allergens,
+        dislikedIngredients,
+        preferredCuisines,
+        allowAiIllustration,
+        voiceFeedbackEnabled,
+        highContrast,
+        reduceMotion,
       ];
 }

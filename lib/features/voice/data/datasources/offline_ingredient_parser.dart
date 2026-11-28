@@ -90,6 +90,11 @@ abstract final class OfflineIngredientParser {
     return _segmentText(cleanedText, expiryMap);
   }
 
+  /// Re-segments glued multi-word strings into distinct individual ingredients
+  static List<ExtractedIngredient> reSegment(String text) {
+    return _segmentText(text, {});
+  }
+
   static List<ExtractedIngredient> _segmentText(String text, Map<String, String> expiryMap) {
     final List<ExtractedIngredient> results = [];
     final lower = text.toLowerCase();

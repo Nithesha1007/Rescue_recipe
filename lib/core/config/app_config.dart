@@ -9,6 +9,8 @@ class AppConfig {
     required this.geminiApiKey,
     required this.geminiModel,
     this.fallbackModel = 'gemini-flash-latest',
+    this.pexelsApiKey = '',
+    this.youtubeApiKey = '',
   });
 
   factory AppConfig.fromEnvironment() => const AppConfig(
@@ -21,11 +23,17 @@ class AppConfig {
           'GEMINI_FALLBACK_MODEL',
           defaultValue: 'gemini-flash-latest',
         ),
+        pexelsApiKey: String.fromEnvironment('PEXELS_API_KEY'),
+        youtubeApiKey: String.fromEnvironment('YOUTUBE_API_KEY'),
       );
 
   final String geminiApiKey;
   final String geminiModel;
   final String fallbackModel;
+  final String pexelsApiKey;
+  final String youtubeApiKey;
 
   bool get hasGeminiKey => geminiApiKey.isNotEmpty;
+  bool get hasPexelsKey => pexelsApiKey.isNotEmpty;
+  bool get hasYoutubeKey => youtubeApiKey.isNotEmpty;
 }

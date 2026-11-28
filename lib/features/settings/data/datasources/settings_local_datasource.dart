@@ -26,6 +26,21 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
   static const String _notifyDayBeforeKey = 'notify_day_before';
   static const String _notifyOnExpiryDayKey = 'notify_on_expiry_day';
   static const String _hasCompletedOnboardingKey = 'has_completed_onboarding';
+  static const String _voiceInputLanguageKey = 'voice_input_language';
+  static const String _guideLanguageKey = 'guide_language';
+  static const String _displayNameKey = 'display_name';
+  static const String _avatarEmojiKey = 'avatar_emoji';
+  static const String _householdSizeKey = 'household_size';
+  static const String _defaultServingsKey = 'default_servings';
+  static const String _cookingSkillKey = 'cooking_skill';
+  static const String _spiceLevelKey = 'spice_level';
+  static const String _allergensKey = 'allergens_csv';
+  static const String _dislikedKey = 'disliked_csv';
+  static const String _preferredCuisinesKey = 'preferred_cuisines_csv';
+  static const String _allowAiIllustrationKey = 'allow_ai_illustration';
+  static const String _voiceFeedbackEnabledKey = 'voice_feedback_enabled';
+  static const String _highContrastKey = 'high_contrast';
+  static const String _reduceMotionKey = 'reduce_motion';
 
   SettingsLocalDataSourceImpl(this._preferencesBox);
 
@@ -60,6 +75,55 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
     final notifyOnExpiryDay = _preferencesBox.get(_notifyOnExpiryDayKey, defaultValue: 'true') == 'true';
     final hasOnboarded = _preferencesBox.get(_hasCompletedOnboardingKey, defaultValue: 'false') == 'true';
 
+    final voiceInputLangStr = _preferencesBox.get(_voiceInputLanguageKey, defaultValue: 'auto');
+    final voiceInputLanguage = VoiceInputLanguage.values.firstWhere(
+      (v) => v.name == voiceInputLangStr,
+      orElse: () => VoiceInputLanguage.auto,
+    );
+
+    final guideLangStr = _preferencesBox.get(_guideLanguageKey, defaultValue: 'english');
+    final guideLanguage = GuideLanguage.values.firstWhere(
+      (g) => g.name == guideLangStr,
+      orElse: () => GuideLanguage.english,
+    );
+
+    final displayName = _preferencesBox.get(_displayNameKey, defaultValue: '') ?? '';
+    final avatarEmoji = _preferencesBox.get(_avatarEmojiKey, defaultValue: '🧑‍🍳') ?? '🧑‍🍳';
+    final householdSize = int.tryParse(_preferencesBox.get(_householdSizeKey, defaultValue: '2') ?? '2') ?? 2;
+    final defaultServings = int.tryParse(_preferencesBox.get(_defaultServingsKey, defaultValue: '2') ?? '2') ?? 2;
+
+    final skillStr = _preferencesBox.get(_cookingSkillKey, defaultValue: 'intermediate');
+    final cookingSkill = CookingSkill.values.firstWhere(
+      (s) => s.name == skillStr,
+      orElse: () => CookingSkill.intermediate,
+    );
+
+    final spiceStr = _preferencesBox.get(_spiceLevelKey, defaultValue: 'medium');
+    final spiceLevel = SpiceLevel.values.firstWhere(
+      (s) => s.name == spiceStr,
+      orElse: () => SpiceLevel.medium,
+    );
+
+    final allergensRaw = _preferencesBox.get(_allergensKey, defaultValue: '') ?? '';
+    final allergens = allergensRaw.isNotEmpty
+        ? allergensRaw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+        : <String>[];
+
+    final dislikedRaw = _preferencesBox.get(_dislikedKey, defaultValue: '') ?? '';
+    final dislikedIngredients = dislikedRaw.isNotEmpty
+        ? dislikedRaw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+        : <String>[];
+
+    final cuisinesRaw = _preferencesBox.get(_preferredCuisinesKey, defaultValue: '') ?? '';
+    final preferredCuisines = cuisinesRaw.isNotEmpty
+        ? cuisinesRaw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+        : <String>[];
+
+    final allowAiIllustration = _preferencesBox.get(_allowAiIllustrationKey, defaultValue: 'false') == 'true';
+    final voiceFeedbackEnabled = _preferencesBox.get(_voiceFeedbackEnabledKey, defaultValue: 'true') == 'true';
+    final highContrast = _preferencesBox.get(_highContrastKey, defaultValue: 'false') == 'true';
+    final reduceMotion = _preferencesBox.get(_reduceMotionKey, defaultValue: 'false') == 'true';
+
     return UserPreferences(
       diet: diet,
       cuisine: cuisine,
@@ -74,6 +138,21 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
       notifyDayBefore: notifyDayBefore,
       notifyOnExpiryDay: notifyOnExpiryDay,
       hasCompletedOnboarding: hasOnboarded,
+      voiceInputLanguage: voiceInputLanguage,
+      guideLanguage: guideLanguage,
+      displayName: displayName,
+      avatarEmoji: avatarEmoji,
+      householdSize: householdSize,
+      defaultServings: defaultServings,
+      cookingSkill: cookingSkill,
+      spiceLevel: spiceLevel,
+      allergens: allergens,
+      dislikedIngredients: dislikedIngredients,
+      preferredCuisines: preferredCuisines,
+      allowAiIllustration: allowAiIllustration,
+      voiceFeedbackEnabled: voiceFeedbackEnabled,
+      highContrast: highContrast,
+      reduceMotion: reduceMotion,
     );
   }
 
@@ -96,6 +175,21 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
     await _preferencesBox.put(_notifyDayBeforeKey, preferences.notifyDayBefore.toString());
     await _preferencesBox.put(_notifyOnExpiryDayKey, preferences.notifyOnExpiryDay.toString());
     await _preferencesBox.put(_hasCompletedOnboardingKey, preferences.hasCompletedOnboarding.toString());
+    await _preferencesBox.put(_voiceInputLanguageKey, preferences.voiceInputLanguage.name);
+    await _preferencesBox.put(_guideLanguageKey, preferences.guideLanguage.name);
+    await _preferencesBox.put(_displayNameKey, preferences.displayName);
+    await _preferencesBox.put(_avatarEmojiKey, preferences.avatarEmoji);
+    await _preferencesBox.put(_householdSizeKey, preferences.householdSize.toString());
+    await _preferencesBox.put(_defaultServingsKey, preferences.defaultServings.toString());
+    await _preferencesBox.put(_cookingSkillKey, preferences.cookingSkill.name);
+    await _preferencesBox.put(_spiceLevelKey, preferences.spiceLevel.name);
+    await _preferencesBox.put(_allergensKey, preferences.allergens.join(','));
+    await _preferencesBox.put(_dislikedKey, preferences.dislikedIngredients.join(','));
+    await _preferencesBox.put(_preferredCuisinesKey, preferences.preferredCuisines.join(','));
+    await _preferencesBox.put(_allowAiIllustrationKey, preferences.allowAiIllustration.toString());
+    await _preferencesBox.put(_voiceFeedbackEnabledKey, preferences.voiceFeedbackEnabled.toString());
+    await _preferencesBox.put(_highContrastKey, preferences.highContrast.toString());
+    await _preferencesBox.put(_reduceMotionKey, preferences.reduceMotion.toString());
   }
 
   @override

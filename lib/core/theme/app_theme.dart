@@ -11,6 +11,7 @@ abstract final class AppColors {
   static const Color lime = Color(0xFF7BD389);
   static const Color limeSoft = Color(0xFFC8F5D0);
   static const Color orange = Color(0xFFFF8A3D);
+  static const Color orangeDark = Color(0xFFD84315);
   static const Color cream = Color(0xFFFFF8EC);
   static const Color darkSurface = Color(0xFF0E1512);
 
@@ -27,6 +28,7 @@ abstract final class AppColors {
   static const Color high = orange;
   static const Color onHigh = Color(0xFF1B1B1B);
   static const Color medium = Color(0xFFFFC107);
+  static const Color amber = medium;
   static const Color onMedium = Color(0xFF1B1B1B);
   static const Color low = Color(0xFF2E7D32);
   static const Color onLow = Color(0xFFFFFFFF);

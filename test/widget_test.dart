@@ -25,6 +25,8 @@ import 'package:rescue_recipe/features/recipes/domain/repositories/recipe_reposi
 import 'package:rescue_recipe/features/recipes/domain/usecases/generate_recipes.dart';
 import 'package:rescue_recipe/features/recipes/domain/usecases/update_diet_preference.dart';
 import 'package:rescue_recipe/features/recipes/presentation/bloc/recipes_bloc.dart';
+import 'package:rescue_recipe/features/recipes/presentation/cubit/rescue_suggestions_cubit.dart';
+import 'package:rescue_recipe/features/ingredients/domain/usecases/watch_active_ingredients.dart';
 import 'package:rescue_recipe/features/settings/domain/entities/user_preferences.dart';
 import 'package:rescue_recipe/features/settings/domain/repositories/settings_repository.dart';
 import 'package:rescue_recipe/features/settings/domain/usecases/clear_all_data.dart';
@@ -157,6 +159,17 @@ void main() {
       () => RecipesBloc(
         generateRecipes: sl<GenerateRecipes>(),
         updateDietPreference: sl<UpdateDietPreference>(),
+      ),
+    );
+    sl.registerLazySingleton<WatchActiveIngredients>(
+      () => WatchActiveIngredients(sl<IngredientRepository>()),
+    );
+    sl.registerLazySingleton<RescueSuggestionsCubit>(
+      () => RescueSuggestionsCubit(
+        watchActiveIngredients: sl<WatchActiveIngredients>(),
+        generateRecipes: sl<GenerateRecipes>(),
+        updateDietPreference: sl<UpdateDietPreference>(),
+        enableTimers: false,
       ),
     );
 

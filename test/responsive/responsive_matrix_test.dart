@@ -26,8 +26,9 @@ import 'package:rescue_recipe/features/insights/presentation/pages/insights_page
 import 'package:rescue_recipe/features/recipes/domain/repositories/recipe_repository.dart';
 import 'package:rescue_recipe/features/recipes/domain/usecases/generate_recipes.dart';
 import 'package:rescue_recipe/features/recipes/domain/usecases/update_diet_preference.dart';
-import 'package:rescue_recipe/features/recipes/presentation/bloc/recipes_bloc.dart';
+import 'package:rescue_recipe/features/recipes/presentation/cubit/rescue_suggestions_cubit.dart';
 import 'package:rescue_recipe/features/recipes/presentation/pages/recipes_page.dart';
+import 'package:rescue_recipe/features/ingredients/domain/usecases/watch_active_ingredients.dart';
 import 'package:rescue_recipe/features/settings/domain/entities/user_preferences.dart';
 import 'package:rescue_recipe/features/settings/domain/repositories/settings_repository.dart';
 import 'package:rescue_recipe/features/settings/domain/usecases/clear_all_data.dart';
@@ -38,6 +39,7 @@ import 'package:rescue_recipe/features/shell/presentation/cubit/navigation_cubit
 import 'package:rescue_recipe/features/shell/presentation/pages/home_page.dart';
 import 'package:rescue_recipe/core/models/ai_status.dart';
 import 'package:rescue_recipe/features/voice/data/datasources/gemini_remote_datasource.dart';
+import 'package:rescue_recipe/features/voice/domain/entities/audio_extraction_result.dart';
 import 'package:rescue_recipe/features/voice/domain/entities/extracted_ingredient.dart';
 import 'package:rescue_recipe/features/voice/domain/repositories/ingredient_extraction_repository.dart';
 import 'package:rescue_recipe/features/voice/domain/repositories/speech_repository.dart';
@@ -83,6 +85,16 @@ class _FakeGeminiRemoteDataSource implements GeminiRemoteDataSource {
   @override
   Future<List<ExtractedIngredient>> extractIngredients(String transcript) async => [];
   @override
+  Future<AudioExtractionResult> extractFromAudio({
+    required List<int> audioBytes,
+    required String mimeType,
+  }) async =>
+      const AudioExtractionResult(
+        transcript: '',
+        detectedLanguage: 'en',
+        ingredients: [],
+      );
+  @override
   Future<AiStatus> testConnection() async => const AiStatus(state: AiConnectionState.ok);
 }
 
@@ -96,7 +108,7 @@ Widget _buildMatrixScreen({
     providers: [
       BlocProvider<NavigationCubit>(create: (_) => sl<NavigationCubit>()),
       BlocProvider<InventoryCubit>(create: (_) => sl<InventoryCubit>()..loadIngredients()),
-      BlocProvider<RecipesBloc>(create: (_) => sl<RecipesBloc>()),
+      BlocProvider<RescueSuggestionsCubit>(create: (_) => sl<RescueSuggestionsCubit>()),
       BlocProvider<VoiceInputBloc>(create: (_) => sl<VoiceInputBloc>()),
       BlocProvider<SettingsCubit>(create: (_) => sl<SettingsCubit>()..loadSettings()),
       BlocProvider<InsightsCubit>(create: (_) => sl<InsightsCubit>()..loadInsights()),
@@ -190,10 +202,15 @@ void main() {
       ),
     );
     sl.registerLazySingleton<UpdateDietPreference>(() => UpdateDietPreference(sl<RecipeRepository>()));
-    sl.registerFactory<RecipesBloc>(
-      () => RecipesBloc(
+    sl.registerLazySingleton<WatchActiveIngredients>(
+      () => WatchActiveIngredients(sl<IngredientRepository>()),
+    );
+    sl.registerLazySingleton<RescueSuggestionsCubit>(
+      () => RescueSuggestionsCubit(
+        watchActiveIngredients: sl<WatchActiveIngredients>(),
         generateRecipes: sl<GenerateRecipes>(),
         updateDietPreference: sl<UpdateDietPreference>(),
+        enableTimers: false,
       ),
     );
 

@@ -131,4 +131,7 @@ abstract final class IngredientEmoji {
     }
     return fallback;
   }
+
+  /// Alias for forIngredient
+  static String get(String rawName) => forIngredient(rawName);
 }

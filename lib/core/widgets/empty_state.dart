@@ -11,6 +11,7 @@ class EmptyState extends StatelessWidget {
     this.message,
     this.actionLabel,
     this.onAction,
+    this.extraContent,
   });
 
   final IconData icon;
@@ -18,6 +19,7 @@ class EmptyState extends StatelessWidget {
   final String? message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final Widget? extraContent;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +68,10 @@ class EmptyState extends StatelessWidget {
                   onPressed: onAction,
                   variant: AppButtonVariant.tonal,
                 ),
+              ],
+              if (extraContent != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                extraContent!,
               ],
             ],
           ),

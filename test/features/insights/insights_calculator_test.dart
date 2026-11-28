@@ -321,4 +321,56 @@ void main() {
       expect(rescueRookie.isUnlocked, isFalse);
     });
   });
+
+  group('InsightsCalculator 28-day streak calendar and frequencies', () {
+    test('produces 28-day calendar and ranks top rescued and waste watch items', () {
+      final entries = [
+        UsageLogEntry(
+          id: '1',
+          ingredientName: 'tomato',
+          quantity: 2,
+          unit: 'pcs',
+          action: UsageAction.used,
+          priorityAtUsage: ExpiryPriority.critical,
+          timestamp: testToday,
+        ),
+        UsageLogEntry(
+          id: '2',
+          ingredientName: 'tomato',
+          quantity: 1,
+          unit: 'pcs',
+          action: UsageAction.used,
+          priorityAtUsage: ExpiryPriority.high,
+          timestamp: testToday.subtract(const Duration(days: 1)),
+        ),
+        UsageLogEntry(
+          id: '3',
+          ingredientName: 'banana',
+          quantity: 3,
+          unit: 'pcs',
+          action: UsageAction.discarded,
+          priorityAtUsage: ExpiryPriority.expired,
+          timestamp: testToday,
+        ),
+      ];
+
+      final summary = InsightsCalculator.calculate(entries, today: testToday);
+
+      expect(summary.streakCalendar28Days.length, equals(28));
+      expect(summary.streakCalendar28Days.last, isTrue); // today had activity
+      expect(summary.streakCalendar28Days[26], isTrue); // yesterday had activity
+
+      expect(summary.rescuedThisWeek, equals(2));
+      expect(summary.rescuedLastWeek, equals(0));
+      expect(summary.weekOverWeekDiff, equals(2));
+
+      expect(summary.topRescuedIngredients.length, equals(1));
+      expect(summary.topRescuedIngredients.first.name, equals('tomato'));
+      expect(summary.topRescuedIngredients.first.count, equals(2));
+
+      expect(summary.wasteWatchList.length, equals(1));
+      expect(summary.wasteWatchList.first.name, equals('banana'));
+      expect(summary.wasteWatchList.first.tip, contains('smoothies'));
+    });
+  });
 }

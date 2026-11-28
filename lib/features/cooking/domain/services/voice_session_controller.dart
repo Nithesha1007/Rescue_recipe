@@ -1,3 +1,4 @@
+import '../../../settings/domain/entities/user_preferences.dart';
 import '../entities/voice_command.dart';
 
 enum AudioSessionState {
@@ -19,12 +20,17 @@ abstract class VoiceSessionController {
   /// Current audio session state.
   AudioSessionState get currentState;
 
+  /// Active Guide Language.
+  GuideLanguage get guideLanguage;
+
+  /// Sets the guide language for TTS and bilingual speech listening.
+  void setGuideLanguage(GuideLanguage language);
+
   /// Speaks [text]. Guarantees listening is stopped before speaking begins,
   /// and completes only when TTS finishes speaking plus a 300ms buffer.
   Future<void> speak(String text);
 
   /// Starts listening for a voice command.
-  /// If [autoResumeLoop] is true, it continues listening after commands until paused or max silent cycles.
   Future<void> startListening({bool isPausedContext = false});
 
   /// Stops both listening and speaking immediately.

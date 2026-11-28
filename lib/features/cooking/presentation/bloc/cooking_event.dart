@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../../recipes/domain/entities/recipe.dart';
+import '../../../settings/domain/entities/user_preferences.dart';
 import '../../domain/entities/voice_command.dart';
 import '../../domain/services/voice_session_controller.dart';
 
@@ -12,11 +13,21 @@ abstract class CookingEvent extends Equatable {
 
 class CookingStarted extends CookingEvent {
   final Recipe recipe;
+  final GuideLanguage guideLanguage;
 
-  const CookingStarted(this.recipe);
+  const CookingStarted(this.recipe, {this.guideLanguage = GuideLanguage.english});
 
   @override
-  List<Object?> get props => [recipe];
+  List<Object?> get props => [recipe, guideLanguage];
+}
+
+class GuideLanguageChanged extends CookingEvent {
+  final GuideLanguage guideLanguage;
+
+  const GuideLanguageChanged(this.guideLanguage);
+
+  @override
+  List<Object?> get props => [guideLanguage];
 }
 
 class StepNextTriggered extends CookingEvent {

@@ -1,6 +1,12 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../recipes/domain/entities/recipe.dart';
+import '../../../recipes/domain/services/step_ingredient_linker.dart';
+import '../../../recipes/domain/usecases/translate_recipe_content.dart';
+import '../../../settings/domain/entities/user_preferences.dart';
+import '../../domain/entities/spoken_strings.dart';
 import '../../domain/entities/voice_command.dart';
+import '../../domain/services/tts_voice_manager.dart';
 import '../../domain/services/voice_session_controller.dart';
 import '../../domain/usecases/compute_inventory_deduction.dart';
 import '../../domain/usecases/finish_cooking.dart';
@@ -16,9 +22,12 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
   final ComputeInventoryDeduction _computeInventoryDeduction;
   final FinishCooking _finishCooking;
   final VoiceSessionController _voiceController;
+  final TranslateRecipeContent? _translateRecipeContent;
+  final TtsVoiceManager _ttsVoiceManager;
 
   StreamSubscription<AudioSessionState>? _audioStateSub;
   StreamSubscription<VoiceCommand>? _commandSub;
+  Timer? _countdownTimer;
 
   CookingBloc({
     required StartCooking startCooking,
@@ -26,13 +35,18 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     required ComputeInventoryDeduction computeInventoryDeduction,
     required FinishCooking finishCooking,
     required VoiceSessionController voiceController,
+    TranslateRecipeContent? translateRecipeContent,
+    TtsVoiceManager? ttsVoiceManager,
   })  : _startCooking = startCooking,
         _navigateStep = navigateStep,
         _computeInventoryDeduction = computeInventoryDeduction,
         _finishCooking = finishCooking,
         _voiceController = voiceController,
+        _translateRecipeContent = translateRecipeContent,
+        _ttsVoiceManager = ttsVoiceManager ?? TtsVoiceManager(),
         super(const CookingState()) {
     on<CookingStarted>(_onCookingStarted);
+    on<GuideLanguageChanged>(_onGuideLanguageChanged);
     on<StepNextTriggered>(_onStepNext);
     on<StepPreviousTriggered>(_onStepPrevious);
     on<StepRepeatTriggered>(_onStepRepeat);
@@ -52,7 +66,6 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     on<StopStepTimer>(_onStopStepTimer);
     on<TimerTickReceived>(_onTimerTickReceived);
 
-    // Listen to voice controller streams
     _audioStateSub = _voiceController.stateStream.listen(
       (state) => add(AudioSessionStateChanged(state)),
     );
@@ -65,9 +78,25 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     CookingStarted event,
     Emitter<CookingState> emit,
   ) async {
-    emit(state.copyWith(flowStatus: CookingFlowStatus.loading));
+    emit(state.copyWith(
+      flowStatus: CookingFlowStatus.loading,
+      guideLanguage: event.guideLanguage,
+    ));
 
-    final result = await _startCooking(StartCookingParams(event.recipe));
+    _voiceController.setGuideLanguage(event.guideLanguage);
+
+    // Check voice data availability
+    final isVoiceAvailable = await _ttsVoiceManager.isLanguageAvailable(event.guideLanguage);
+
+    Recipe recipeToUse = event.recipe;
+    if (event.guideLanguage != GuideLanguage.english && _translateRecipeContent != null) {
+      recipeToUse = await _translateRecipeContent.execute(
+        recipe: event.recipe,
+        targetLanguage: event.guideLanguage,
+      );
+    }
+
+    final result = await _startCooking(StartCookingParams(recipeToUse));
     await result.fold(
       (failure) async {
         emit(state.copyWith(
@@ -80,13 +109,21 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
           flowStatus: CookingFlowStatus.running,
           session: session,
           isSafetyPromptSpoken: true,
+          isVoiceDataMissing: !isVoiceAvailable,
         ));
 
-        // Read safety line once and read step 1
-        const safetyMessage =
-            "Before we start: if any ingredient looks or smells spoiled, don't use it.";
+        final safetyLine = SpokenStrings.foodSafetyDisclaimer(event.guideLanguage);
         final firstStep = session.currentStepText;
-        final introSpeech = "$safetyMessage Step 1: $firstStep";
+        final stepPrefix = SpokenStrings.stepOfTotal(1, session.recipe.steps.length, event.guideLanguage);
+        
+        final linkedIngredients = StepIngredientLinker.linkIngredientsForStep(
+          step: session.recipe.steps.first,
+          recipeIngredients: session.recipe.ingredients,
+        );
+        final spokenIngredients = StepIngredientLinker.formatSpokenList(linkedIngredients);
+        final introSpeech = spokenIngredients.isNotEmpty
+            ? "$safetyLine $stepPrefix: $spokenIngredients $firstStep"
+            : "$safetyLine $stepPrefix: $firstStep";
 
         await _voiceController.speak(introSpeech);
         if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
@@ -94,6 +131,44 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
         }
       },
     );
+  }
+
+  Future<void> _onGuideLanguageChanged(
+    GuideLanguageChanged event,
+    Emitter<CookingState> emit,
+  ) async {
+    if (state.guideLanguage == event.guideLanguage) return;
+
+    final session = state.session;
+    if (session == null) return;
+
+    _voiceController.setGuideLanguage(event.guideLanguage);
+    final isVoiceAvailable = await _ttsVoiceManager.isLanguageAvailable(event.guideLanguage);
+
+    Recipe translatedRecipe = session.recipe;
+    if (event.guideLanguage != GuideLanguage.english && _translateRecipeContent != null) {
+      translatedRecipe = await _translateRecipeContent.execute(
+        recipe: session.recipe,
+        targetLanguage: event.guideLanguage,
+      );
+    }
+
+    final updatedSession = session.copyWith(
+      recipe: translatedRecipe,
+    );
+
+    emit(state.copyWith(
+      guideLanguage: event.guideLanguage,
+      session: updatedSession,
+      isVoiceDataMissing: !isVoiceAvailable,
+    ));
+
+    final stepNum = updatedSession.currentStepIndex + 1;
+    final stepPrefix = SpokenStrings.stepOfTotal(stepNum, updatedSession.recipe.steps.length, event.guideLanguage);
+    await _voiceController.speak("$stepPrefix: ${updatedSession.currentStepText}");
+    if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
+      _voiceController.startListening();
+    }
   }
 
   Future<void> _onStepNext(
@@ -104,7 +179,6 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     if (session == null) return;
 
     if (session.isLastStep) {
-      // Last step: prompt completion
       add(const FinishCookingRequested());
       return;
     }
@@ -122,7 +196,20 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
           spokenFeedback: null,
         ));
         final stepNum = updatedSession.currentStepIndex + 1;
-        final text = "Step $stepNum: ${updatedSession.currentStepText}";
+        final currentStep = updatedSession.recipe.steps[updatedSession.currentStepIndex];
+        final linkedIngredients = StepIngredientLinker.linkIngredientsForStep(
+          step: currentStep,
+          recipeIngredients: updatedSession.recipe.ingredients,
+        );
+        final spokenIngredients = StepIngredientLinker.formatSpokenList(linkedIngredients);
+        final stepPrefix = SpokenStrings.stepOfTotal(
+          stepNum,
+          updatedSession.recipe.steps.length,
+          state.guideLanguage,
+        );
+        final text = spokenIngredients.isNotEmpty
+            ? "$stepPrefix: $spokenIngredients ${updatedSession.currentStepText}"
+            : "$stepPrefix: ${updatedSession.currentStepText}";
         await _voiceController.speak(text);
         if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
           _voiceController.startListening();
@@ -136,7 +223,11 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     Emitter<CookingState> emit,
   ) async {
     final session = state.session;
-    if (session == null || session.isFirstStep) return;
+    if (session == null || session.isFirstStep) {
+      final firstMsg = SpokenStrings.firstStep(state.guideLanguage);
+      await _voiceController.speak(firstMsg);
+      return;
+    }
 
     final result = await _navigateStep(NavigateStepParams(
       session: session,
@@ -151,7 +242,20 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
           spokenFeedback: null,
         ));
         final stepNum = updatedSession.currentStepIndex + 1;
-        final text = "Step $stepNum: ${updatedSession.currentStepText}";
+        final currentStep = updatedSession.recipe.steps[updatedSession.currentStepIndex];
+        final linkedIngredients = StepIngredientLinker.linkIngredientsForStep(
+          step: currentStep,
+          recipeIngredients: updatedSession.recipe.ingredients,
+        );
+        final spokenIngredients = StepIngredientLinker.formatSpokenList(linkedIngredients);
+        final stepPrefix = SpokenStrings.stepOfTotal(
+          stepNum,
+          updatedSession.recipe.steps.length,
+          state.guideLanguage,
+        );
+        final text = spokenIngredients.isNotEmpty
+            ? "$stepPrefix: $spokenIngredients ${updatedSession.currentStepText}"
+            : "$stepPrefix: ${updatedSession.currentStepText}";
         await _voiceController.speak(text);
         if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
           _voiceController.startListening();
@@ -168,7 +272,12 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     if (session == null) return;
 
     final stepNum = session.currentStepIndex + 1;
-    final text = "Step $stepNum: ${session.currentStepText}";
+    final stepPrefix = SpokenStrings.stepOfTotal(
+      stepNum,
+      session.recipe.steps.length,
+      state.guideLanguage,
+    );
+    final text = "$stepPrefix: ${session.currentStepText}";
     await _voiceController.speak(text);
     if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
       _voiceController.startListening();
@@ -196,7 +305,20 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
           spokenFeedback: null,
         ));
         final stepNum = updatedSession.currentStepIndex + 1;
-        final text = "Step $stepNum: ${updatedSession.currentStepText}";
+        final currentStep = updatedSession.recipe.steps[updatedSession.currentStepIndex];
+        final linkedIngredients = StepIngredientLinker.linkIngredientsForStep(
+          step: currentStep,
+          recipeIngredients: updatedSession.recipe.ingredients,
+        );
+        final spokenIngredients = StepIngredientLinker.formatSpokenList(linkedIngredients);
+        final stepPrefix = SpokenStrings.stepOfTotal(
+          stepNum,
+          updatedSession.recipe.steps.length,
+          state.guideLanguage,
+        );
+        final text = spokenIngredients.isNotEmpty
+            ? "$stepPrefix: $spokenIngredients ${updatedSession.currentStepText}"
+            : "$stepPrefix: ${updatedSession.currentStepText}";
         await _voiceController.speak(text);
         if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
           _voiceController.startListening();
@@ -211,7 +333,8 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
   ) async {
     await _voiceController.stopAll();
     emit(state.copyWith(flowStatus: CookingFlowStatus.paused));
-    await _voiceController.speak("Paused. Say resume when you're ready.");
+    final msg = SpokenStrings.paused(state.guideLanguage);
+    await _voiceController.speak(msg);
   }
 
   Future<void> _onCookingResumed(
@@ -222,8 +345,13 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     final session = state.session;
     if (session != null) {
       final stepNum = session.currentStepIndex + 1;
-      await _voiceController
-          .speak("Resuming step $stepNum: ${session.currentStepText}");
+      final resumedMsg = SpokenStrings.resumed(state.guideLanguage);
+      final stepPrefix = SpokenStrings.stepOfTotal(
+        stepNum,
+        session.recipe.steps.length,
+        state.guideLanguage,
+      );
+      await _voiceController.speak("$resumedMsg $stepPrefix: ${session.currentStepText}");
       if (!isClosed) {
         _voiceController.startListening();
       }
@@ -249,8 +377,13 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
           session: updatedSession,
           flowStatus: CookingFlowStatus.running,
         ));
-        await _voiceController
-            .speak("Starting over. Step 1: ${updatedSession.currentStepText}");
+        final startOverMsg = SpokenStrings.startedOver(state.guideLanguage);
+        final stepPrefix = SpokenStrings.stepOfTotal(
+          1,
+          updatedSession.recipe.steps.length,
+          state.guideLanguage,
+        );
+        await _voiceController.speak("$startOverMsg $stepPrefix: ${updatedSession.currentStepText}");
         if (!isClosed) {
           _voiceController.startListening();
         }
@@ -316,8 +449,7 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
       case CommandListIngredients():
         final session = state.session;
         if (session != null) {
-          final items =
-              session.recipe.ingredients.map((i) => i.name).join(', ');
+          final items = session.recipe.ingredients.map((i) => i.name).join(', ');
           final answer = "This recipe uses: $items.";
           emit(state.copyWith(spokenFeedback: answer));
           await _voiceController.speak(answer);
@@ -333,12 +465,11 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
           final stepTip = currentStep.tip;
           final String tipMessage;
           if (stepTip != null && stepTip.isNotEmpty) {
-            tipMessage = "Here's a tip: $stepTip";
+            tipMessage = stepTip;
           } else if (session.recipe.tips.isNotEmpty) {
-            tipMessage = "Chef's tip: ${session.recipe.tips.first}";
+            tipMessage = session.recipe.tips.first;
           } else {
-            tipMessage =
-                "No specific tip for this step. Take your time and keep cooking!";
+            tipMessage = SpokenStrings.noTipAvailable(state.guideLanguage);
           }
           emit(state.copyWith(spokenFeedback: tipMessage));
           await _voiceController.speak(tipMessage);
@@ -365,8 +496,7 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
       case CommandUnknown(:final rawText):
         if (rawText.isNotEmpty) {
           emit(state.copyWith(
-              spokenFeedback:
-                  "Sorry, I didn't catch that. Say next, back, repeat, or pause."));
+              spokenFeedback: "Sorry, I didn't catch that. Say next, back, repeat, or pause."));
           await _voiceController.speak("Sorry, I didn't catch that.");
           if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
             _voiceController.startListening();
@@ -461,24 +591,23 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
           rescuedCount: finishSummary.rescuedCount,
           totalDeducted: finishSummary.totalDeducted,
         ));
-        await _voiceController.speak(
-          "Great job! You rescued ${finishSummary.rescuedCount} items and completed ${session.recipe.title}.",
-        );
+        final completedMsg = SpokenStrings.cookingCompleted(state.guideLanguage);
+        await _voiceController.speak(completedMsg);
       },
     );
   }
-
-  Timer? _countdownTimer;
 
   void _onStartStepTimer(
     StartStepTimer event,
     Emitter<CookingState> emit,
   ) {
     _countdownTimer?.cancel();
+    final minutes = (event.seconds / 60).round();
+    final timerMsg = SpokenStrings.timerStarted(minutes > 0 ? minutes : 1, state.guideLanguage);
     emit(state.copyWith(
       timerSecondsRemaining: () => event.seconds,
       isTimerActive: true,
-      spokenFeedback: 'Timer started for ${event.seconds ~/ 60 > 0 ? "${event.seconds ~/ 60} minutes" : "${event.seconds} seconds"}.',
+      spokenFeedback: timerMsg,
     ));
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -497,10 +626,11 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     Emitter<CookingState> emit,
   ) {
     _countdownTimer?.cancel();
+    final stoppedMsg = SpokenStrings.timerStopped(state.guideLanguage);
     emit(state.copyWith(
       timerSecondsRemaining: () => null,
       isTimerActive: false,
-      spokenFeedback: 'Timer stopped.',
+      spokenFeedback: stoppedMsg,
     ));
   }
 
@@ -510,12 +640,13 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
   ) async {
     if (event.remainingSeconds <= 0) {
       _countdownTimer?.cancel();
+      final doneMsg = SpokenStrings.timerDone(state.guideLanguage);
       emit(state.copyWith(
         timerSecondsRemaining: () => 0,
         isTimerActive: false,
-        spokenFeedback: 'Timer done!',
+        spokenFeedback: doneMsg,
       ));
-      await _voiceController.speak('Timer done!');
+      await _voiceController.speak(doneMsg);
       if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
         _voiceController.startListening();
       }

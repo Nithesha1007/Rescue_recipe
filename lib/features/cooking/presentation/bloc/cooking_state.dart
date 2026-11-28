@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../settings/domain/entities/user_preferences.dart';
 import '../../domain/entities/cooking_session.dart';
 import '../../domain/entities/inventory_deduction.dart';
 import '../../domain/services/voice_session_controller.dart';
@@ -25,6 +26,8 @@ class CookingState extends Equatable {
   final bool isSafetyPromptSpoken;
   final int? timerSecondsRemaining;
   final bool isTimerActive;
+  final GuideLanguage guideLanguage;
+  final bool isVoiceDataMissing;
 
   const CookingState({
     this.flowStatus = CookingFlowStatus.initial,
@@ -38,6 +41,8 @@ class CookingState extends Equatable {
     this.isSafetyPromptSpoken = false,
     this.timerSecondsRemaining,
     this.isTimerActive = false,
+    this.guideLanguage = GuideLanguage.english,
+    this.isVoiceDataMissing = false,
   });
 
   bool get isPaused => flowStatus == CookingFlowStatus.paused;
@@ -54,6 +59,8 @@ class CookingState extends Equatable {
     bool? isSafetyPromptSpoken,
     int? Function()? timerSecondsRemaining,
     bool? isTimerActive,
+    GuideLanguage? guideLanguage,
+    bool? isVoiceDataMissing,
   }) {
     return CookingState(
       flowStatus: flowStatus ?? this.flowStatus,
@@ -67,6 +74,8 @@ class CookingState extends Equatable {
       isSafetyPromptSpoken: isSafetyPromptSpoken ?? this.isSafetyPromptSpoken,
       timerSecondsRemaining: timerSecondsRemaining != null ? timerSecondsRemaining() : this.timerSecondsRemaining,
       isTimerActive: isTimerActive ?? this.isTimerActive,
+      guideLanguage: guideLanguage ?? this.guideLanguage,
+      isVoiceDataMissing: isVoiceDataMissing ?? this.isVoiceDataMissing,
     );
   }
 
@@ -83,5 +92,7 @@ class CookingState extends Equatable {
         isSafetyPromptSpoken,
         timerSecondsRemaining,
         isTimerActive,
+        guideLanguage,
+        isVoiceDataMissing,
       ];
 }

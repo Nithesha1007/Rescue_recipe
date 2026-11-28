@@ -14,12 +14,15 @@ import '../../../../core/widgets/pulsing_mic.dart';
 import '../../../../core/widgets/responsive_builder.dart';
 import '../../../../core/widgets/step_indicator.dart';
 import '../../../recipes/domain/entities/recipe.dart';
+import '../../../recipes/domain/services/step_ingredient_linker.dart';
 import '../../domain/services/voice_session_controller.dart';
 import '../bloc/cooking_bloc.dart';
 import '../bloc/cooking_event.dart';
 import '../bloc/cooking_state.dart';
 import '../widgets/cooking_ingredients_sheet.dart';
 import '../widgets/finish_confirmation_sheet.dart';
+import '../widgets/language_chip_switcher.dart';
+import '../../data/services/tts_service.dart';
 
 class CookingPage extends StatelessWidget {
   final Recipe recipe;
@@ -390,6 +393,43 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
                 ),
             ],
           ),
+          const SizedBox(height: AppSpacing.xs),
+
+          // Big Step Ingredients Chips
+          Builder(
+            builder: (_) {
+              final stepIngredients = StepIngredientLinker.linkIngredientsForStep(
+                step: step,
+                recipeIngredients: session.recipe.ingredients,
+              );
+              if (stepIngredients.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: stepIngredients.map((ing) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(color: AppColors.orange.withValues(alpha: 0.35)),
+                      ),
+                      child: Text(
+                        StepIngredientLinker.formatChipLabel(ing),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.orangeDark,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.xs),
           const SizedBox(height: AppSpacing.md),
           Expanded(
             child: SingleChildScrollView(
@@ -435,6 +475,40 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (state.isVoiceDataMissing)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.medium.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.medium),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        'Voice pack for this language is not installed.',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => sl<TtsService>().openVoiceSettings(),
+                      child: const Text('Open Settings'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          LanguageChipSwitcher(
+            selectedLanguage: state.guideLanguage,
+            onLanguageSelected: (lang) {
+              context.read<CookingBloc>().add(GuideLanguageChanged(lang));
+            },
+          ),
+          const SizedBox(height: AppSpacing.xs),
           _buildMicButton(context, state),
           const SizedBox(height: AppSpacing.sm),
           _buildVoiceHintChips(context),

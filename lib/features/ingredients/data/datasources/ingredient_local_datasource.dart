@@ -17,8 +17,9 @@ class IngredientLocalDataSourceImpl implements IngredientLocalDataSource {
   final Box<IngredientModel> _box;
 
   @override
-  Stream<List<IngredientModel>> watchAll() {
-    return _box.watch().map((_) => _box.values.toList());
+  Stream<List<IngredientModel>> watchAll() async* {
+    yield _box.values.toList();
+    yield* _box.watch().map((_) => _box.values.toList());
   }
 
   @override

@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/di/injection.dart';
 import '../../../../core/models/ai_status.dart';
@@ -13,10 +15,10 @@ import '../../../../core/widgets/settings_tile.dart';
 import '../../../cooking/data/services/tts_service.dart';
 import '../../../ingredients/data/datasources/demo_ingredients.dart';
 import '../../../ingredients/presentation/cubit/inventory_cubit.dart';
+import '../../../ingredients/presentation/cubit/inventory_state.dart';
 import '../../../insights/presentation/cubit/insights_cubit.dart';
 import '../../../recipes/domain/entities/diet_tag.dart';
 import '../../../voice/data/datasources/gemini_remote_datasource.dart';
-import '../../domain/entities/cuisine_tag.dart';
 import '../../domain/entities/user_preferences.dart';
 import '../cubit/settings_cubit.dart';
 import '../cubit/settings_state.dart';
@@ -33,6 +35,43 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isTestingAi = false;
   AiStatus? _testedAiStatus;
   late final TextEditingController _customValueController;
+  final TextEditingController _newDislikeController = TextEditingController();
+
+  static const List<String> _commonAllergens = [
+    'Dairy',
+    'Gluten',
+    'Peanuts',
+    'Tree Nuts',
+    'Eggs',
+    'Soy',
+    'Shellfish',
+    'Fish',
+    'Sesame',
+  ];
+
+  static const List<String> _commonCuisines = [
+    'South Indian',
+    'North Indian',
+    'Indo-Chinese',
+    'Italian',
+    'Continental',
+    'Mexican',
+    'Mediterranean',
+    'Thai',
+  ];
+
+  static const List<String> _avatarChoices = [
+    '👨‍🍳',
+    '👩‍🍳',
+    '🧑‍🍳',
+    '🥘',
+    '🍲',
+    '🥑',
+    '🍅',
+    '🌱',
+    '🥗',
+    '🍛',
+  ];
 
   @override
   void initState() {
@@ -46,6 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void dispose() {
     _customValueController.dispose();
+    _newDislikeController.dispose();
     super.dispose();
   }
 
@@ -92,11 +132,185 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _showEditProfileSheet(BuildContext context, UserPreferences prefs) {
+    final nameController = TextEditingController(text: prefs.displayName);
+    String selectedEmoji = prefs.avatarEmoji;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final theme = Theme.of(ctx);
+            final text = theme.textTheme;
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.xl,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.outlineVariant,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Edit Profile',
+                      style: text.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Center(
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.orange.withValues(alpha: 0.15),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          selectedEmoji,
+                          style: const TextStyle(fontSize: 42),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text('Choose Avatar', style: text.labelMedium),
+                    const SizedBox(height: AppSpacing.xs),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      alignment: WrapAlignment.center,
+                      children: _avatarChoices.map((emoji) {
+                        final isSel = emoji == selectedEmoji;
+                        return GestureDetector(
+                          onTap: () => setSheetState(() => selectedEmoji = emoji),
+                          child: Container(
+                            padding: const EdgeInsets.all(AppSpacing.xs),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSel ? AppColors.orange : theme.colorScheme.outlineVariant,
+                                width: isSel ? 2 : 1,
+                              ),
+                              color: isSel ? AppColors.orange.withValues(alpha: 0.1) : null,
+                            ),
+                            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Your Name',
+                        hintText: 'Enter your name',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    AppButton(
+                      label: 'Save Profile',
+                      icon: Icons.check_rounded,
+                      onPressed: () {
+                        final newName = nameController.text.trim();
+                        context.read<SettingsCubit>().updatePreferences(prefs.copyWith(
+                              displayName: newName.isNotEmpty ? newName : 'Food Rescuer',
+                              avatarEmoji: selectedEmoji,
+                            ));
+                        Navigator.pop(sheetCtx);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _exportKitchenData(BuildContext context) {
+    final inventoryState = context.read<InventoryCubit>().state;
+    final prefs = context.read<SettingsCubit>().state.preferences;
+    final insights = context.read<InsightsCubit>().state.summary;
+
+    final items = inventoryState is InventoryLoaded
+        ? inventoryState.items.map((i) => {
+              'id': i.id,
+              'name': i.name,
+              'quantity': i.quantity,
+              'unit': i.unit,
+              'expiryDate': i.expiryDate?.toIso8601String(),
+              'storage': i.storage.name,
+            }).toList()
+        : [];
+
+    final payload = {
+      'exportedAt': DateTime.now().toIso8601String(),
+      'profile': {
+        'displayName': prefs.displayName,
+        'householdSize': prefs.householdSize,
+        'diet': prefs.diet.name,
+        'allergens': prefs.allergens,
+        'dislikedIngredients': prefs.dislikedIngredients,
+        'preferredCuisines': prefs.preferredCuisines,
+      },
+      'inventory': items,
+      'stats': {
+        'rescuedCount': insights?.rescuedCount ?? 0,
+        'usedCount': insights?.usedCount ?? 0,
+        'discardedCount': insights?.discardedCount ?? 0,
+        'rescueScore': insights?.rescueScore ?? 0,
+        'currentStreak': insights?.currentStreak ?? 0,
+      },
+    };
+
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
+    SharePlus.instance.share(ShareParams(text: jsonStr));
+  }
+
+  double _calculateProfileCompletion(UserPreferences prefs) {
+    int total = 6;
+    int completed = 0;
+
+    if (prefs.displayName.isNotEmpty && prefs.displayName != 'Food Rescuer') completed++;
+    if (prefs.diet != DietTag.none) completed++;
+    if (prefs.preferredCuisines.isNotEmpty) completed++;
+    if (prefs.allergens.isNotEmpty || prefs.dislikedIngredients.isNotEmpty) completed++;
+    if (prefs.householdSize > 0) completed++;
+    if (prefs.cookingSkill != CookingSkill.beginner) completed++;
+
+    return (completed / total).clamp(0.2, 1.0);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppPageScaffold(
       title: 'Profile & Settings',
-      subtitle: 'Customize your food rescue experience',
+      subtitle: 'Customize your food rescue assistant',
       scrollable: true,
       body: BlocBuilder<SettingsCubit, SettingsState>(
         builder: (context, state) {
@@ -105,11 +319,11 @@ class _ProfilePageState extends State<ProfilePage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildHeader(context),
+              _buildHeader(context, prefs),
               const SizedBox(height: AppSpacing.lg),
-              _buildAiDiagnosticsSection(context),
+              _buildFoodPreferencesSection(context, prefs),
               const SizedBox(height: AppSpacing.lg),
-              _buildDietAndCuisineSection(context, prefs),
+              _buildHouseholdSection(context, prefs),
               const SizedBox(height: AppSpacing.lg),
               _buildSpeechSection(context, prefs),
               const SizedBox(height: AppSpacing.lg),
@@ -118,6 +332,8 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildNotificationsSection(context, prefs),
               const SizedBox(height: AppSpacing.lg),
               _buildEstimatesSection(context, prefs),
+              const SizedBox(height: AppSpacing.lg),
+              _buildAiDiagnosticsSection(context, prefs),
               const SizedBox(height: AppSpacing.lg),
               _buildDataManagementSection(context),
               const SizedBox(height: AppSpacing.lg),
@@ -132,41 +348,120 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, UserPreferences prefs) {
     final theme = Theme.of(context);
+    final text = theme.textTheme;
+    final insights = context.watch<InsightsCubit>().state.summary;
+    final completion = _calculateProfileCompletion(prefs);
+    final levelName = insights?.levelName ?? 'Seedling';
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: const Icon(
-              Icons.eco_rounded,
-              color: AppColors.orange,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Food Rescuer',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => _showEditProfileSheet(context, prefs),
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.orange.withValues(alpha: 0.15),
+                    border: Border.all(color: AppColors.orange.withValues(alpha: 0.4), width: 2),
                   ),
+                  alignment: Alignment.center,
+                  child: Text(prefs.avatarEmoji, style: const TextStyle(fontSize: 32)),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Voice-first AI kitchen assistant',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            prefs.displayName,
+                            style: text.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          tooltip: 'Edit Profile',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => _showEditProfileSheet(context, prefs),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Text(
+                        'Level: $levelName (Illustrative)',
+                        style: text.labelSmall?.copyWith(
+                          color: AppColors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // 3 Quick Stats
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildQuickStat(context, '${insights?.rescuedCount ?? 0}', 'Rescued', AppColors.low),
+                Container(width: 1, height: 28, color: theme.colorScheme.outlineVariant),
+                _buildQuickStat(context, '${insights?.currentStreak ?? 0} d', 'Streak', AppColors.orange),
+                Container(width: 1, height: 28, color: theme.colorScheme.outlineVariant),
+                _buildQuickStat(
+                  context,
+                  '${prefs.currencySymbol}${insights?.estimatedMoneySaved.toStringAsFixed(0) ?? "0"}',
+                  'Saved',
+                  AppColors.low,
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Profile completion progress
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Profile Completion', style: text.labelSmall),
+              Text('${(completion * 100).toInt()}%', style: text.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            child: LinearProgressIndicator(
+              value: completion,
+              minHeight: 6,
+              backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.orange),
             ),
           ),
         ],
@@ -174,94 +469,38 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildAiDiagnosticsSection(BuildContext context) {
-    final geminiDs = sl.isRegistered<GeminiRemoteDataSource>()
-        ? sl<GeminiRemoteDataSource>()
-        : null;
-    final currentStatus = _testedAiStatus ?? geminiDs?.lastStatus ?? const AiStatus(
-      state: AiConnectionState.untested,
-      message: 'Checking AI status...',
-    );
-
-    final (statusColor, statusIcon, statusHeadline) = switch (currentStatus.state) {
-      AiConnectionState.ok => (
-          AppColors.low,
-          Icons.check_circle_rounded,
-          'Connected to Gemini (${currentStatus.activeModel ?? "flash"})',
-        ),
-      AiConnectionState.noKey => (
-          AppColors.medium,
-          Icons.key_off_rounded,
-          'No API key set (Running in offline mode)',
-        ),
-      AiConnectionState.authError => (
-          AppColors.critical,
-          Icons.error_outline_rounded,
-          'Invalid Gemini API key (401/403)',
-        ),
-      AiConnectionState.modelNotFound => (
-          AppColors.medium,
-          Icons.search_off_rounded,
-          'Model 404 (Auto-fallback to gemini-flash-latest)',
-        ),
-      AiConnectionState.quotaExceeded => (
-          AppColors.medium,
-          Icons.timer_outlined,
-          'Gemini rate limited (429 - waiting)',
-        ),
-      AiConnectionState.offline || AiConnectionState.timeout => (
-          AppColors.medium,
-          Icons.wifi_off_rounded,
-          'Network timeout (Using offline fallback)',
-        ),
-      AiConnectionState.badResponse => (
-          AppColors.critical,
-          Icons.warning_amber_rounded,
-          'Bad response from AI endpoint',
-        ),
-      _ => (
-          AppColors.unknown,
-          Icons.help_outline_rounded,
-          'AI status untested',
-        ),
-    };
-
-    return SettingsSection(
-      title: 'AI Connection Diagnostics',
+  Widget _buildQuickStat(BuildContext context, String value, String label, Color color) {
+    final theme = Theme.of(context);
+    return Column(
       children: [
-        SettingsTile(
-          icon: statusIcon,
-          title: statusHeadline,
-          subtitle: currentStatus.message ??
-              (currentStatus.state == AiConnectionState.ok
-                  ? 'Voice extraction and recipe inspiration are running at peak speed.'
-                  : 'Curated offline recipes and local speech extraction remain fully active.'),
-          bottomControl: Align(
-            alignment: Alignment.centerLeft,
-            child: AppButton(
-              label: _isTestingAi ? 'Testing...' : 'Test AI Connection',
-              variant: AppButtonVariant.outlined,
-              icon: Icons.network_check_rounded,
-              loading: _isTestingAi,
-              onPressed: _testAiConnection,
-            ),
+        Text(
+          value,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDietAndCuisineSection(BuildContext context, UserPreferences prefs) {
+  Widget _buildFoodPreferencesSection(BuildContext context, UserPreferences prefs) {
     final cubit = context.read<SettingsCubit>();
     final theme = Theme.of(context);
 
     return SettingsSection(
-      title: 'Diet & Cuisine Preferences',
+      title: 'Food Preferences & Allergens',
       children: [
         SettingsTile(
           icon: Icons.restaurant_menu_rounded,
           title: 'Dietary Restrictions',
-          subtitle: 'Filters out unmatching recipes',
+          subtitle: 'Filters recipes to match your diet',
           bottomControl: Wrap(
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
@@ -285,29 +524,215 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
         SettingsTile(
-          icon: Icons.ramen_dining_rounded,
-          title: 'Cuisine Style',
-          subtitle: 'Boosts rankings for your favored regional recipes',
+          icon: Icons.warning_amber_rounded,
+          title: 'Allergens (Hard Exclusion)',
+          subtitle: 'Never suggest recipes containing these allergens',
           bottomControl: Wrap(
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
-            children: CuisineTag.values.map((cuisine) {
-              final isSelected = prefs.cuisine == cuisine;
-              return ChoiceChip(
-                label: Text(cuisine.displayName),
+            children: _commonAllergens.map((allergen) {
+              final isSelected = prefs.allergens.contains(allergen);
+              return FilterChip(
+                label: Text(allergen),
                 selected: isSelected,
-                selectedColor: AppColors.orange,
+                selectedColor: AppColors.critical.withValues(alpha: 0.2),
+                checkmarkColor: AppColors.critical,
                 labelStyle: TextStyle(
-                  color: isSelected ? theme.colorScheme.onPrimary : null,
+                  color: isSelected ? AppColors.critical : null,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
                 onSelected: (selected) {
+                  final list = List<String>.from(prefs.allergens);
                   if (selected) {
-                    cubit.updatePreferences(prefs.copyWith(cuisine: cuisine));
+                    list.add(allergen);
+                  } else {
+                    list.remove(allergen);
                   }
+                  cubit.updatePreferences(prefs.copyWith(allergens: list));
                 },
               );
             }).toList(),
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.thumb_down_outlined,
+          title: 'Disliked Ingredients',
+          subtitle: 'Exclude recipes with ingredients you dislike',
+          bottomControl: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (prefs.dislikedIngredients.isNotEmpty)
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: prefs.dislikedIngredients.map((item) {
+                    return Chip(
+                      label: Text(item),
+                      deleteIcon: const Icon(Icons.close_rounded, size: 16),
+                      onDeleted: () {
+                        final list = List<String>.from(prefs.dislikedIngredients)..remove(item);
+                        cubit.updatePreferences(prefs.copyWith(dislikedIngredients: list));
+                      },
+                    );
+                  }).toList(),
+                ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _newDislikeController,
+                      decoration: const InputDecoration(
+                        hintText: 'Add an ingredient to avoid',
+                        isDense: true,
+                      ),
+                      onSubmitted: (val) {
+                        final trimmed = val.trim();
+                        if (trimmed.isNotEmpty && !prefs.dislikedIngredients.contains(trimmed)) {
+                          final list = List<String>.from(prefs.dislikedIngredients)..add(trimmed);
+                          cubit.updatePreferences(prefs.copyWith(dislikedIngredients: list));
+                          _newDislikeController.clear();
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  AppButton(
+                    label: 'Add',
+                    variant: AppButtonVariant.tonal,
+                    onPressed: () {
+                      final trimmed = _newDislikeController.text.trim();
+                      if (trimmed.isNotEmpty && !prefs.dislikedIngredients.contains(trimmed)) {
+                        final list = List<String>.from(prefs.dislikedIngredients)..add(trimmed);
+                        cubit.updatePreferences(prefs.copyWith(dislikedIngredients: list));
+                        _newDislikeController.clear();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.ramen_dining_rounded,
+          title: 'Preferred Cuisines',
+          subtitle: 'Boosts recipe ranking for your regional tastes',
+          bottomControl: Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: _commonCuisines.map((c) {
+              final isSelected = prefs.preferredCuisines.contains(c);
+              return FilterChip(
+                label: Text(c),
+                selected: isSelected,
+                selectedColor: AppColors.orange.withValues(alpha: 0.2),
+                checkmarkColor: AppColors.orange,
+                labelStyle: TextStyle(
+                  color: isSelected ? AppColors.orange : null,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+                onSelected: (selected) {
+                  final list = List<String>.from(prefs.preferredCuisines);
+                  if (selected) {
+                    list.add(c);
+                  } else {
+                    list.remove(c);
+                  }
+                  cubit.updatePreferences(prefs.copyWith(preferredCuisines: list));
+                },
+              );
+            }).toList(),
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.local_fire_department_outlined,
+          title: 'Spice Tolerance',
+          subtitle: 'Adjusts heat level in AI recipe suggestions',
+          bottomControl: SegmentedButton<SpiceLevel>(
+            segments: const [
+              ButtonSegment(value: SpiceLevel.mild, label: Text('Mild')),
+              ButtonSegment(value: SpiceLevel.medium, label: Text('Medium')),
+              ButtonSegment(value: SpiceLevel.hot, label: Text('Hot 🔥')),
+            ],
+            selected: {prefs.spiceLevel},
+            onSelectionChanged: (val) {
+              cubit.updatePreferences(prefs.copyWith(spiceLevel: val.first));
+            },
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.outdoor_grill_outlined,
+          title: 'Cooking Skill Level',
+          subtitle: 'Customizes recipe complexity and step instructions',
+          bottomControl: SegmentedButton<CookingSkill>(
+            segments: const [
+              ButtonSegment(value: CookingSkill.beginner, label: Text('Beginner')),
+              ButtonSegment(value: CookingSkill.intermediate, label: Text('Intermediate')),
+              ButtonSegment(value: CookingSkill.expert, label: Text('Expert')),
+            ],
+            selected: {prefs.cookingSkill},
+            onSelectionChanged: (val) {
+              cubit.updatePreferences(prefs.copyWith(cookingSkill: val.first));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHouseholdSection(BuildContext context, UserPreferences prefs) {
+    final cubit = context.read<SettingsCubit>();
+    final theme = Theme.of(context);
+    final text = theme.textTheme;
+
+    return SettingsSection(
+      title: 'Household & Recipe Servings',
+      children: [
+        SettingsTile(
+          icon: Icons.people_outline_rounded,
+          title: 'Household Size',
+          subtitle: 'Helps estimate meal quantities',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline_rounded),
+                onPressed: prefs.householdSize > 1
+                    ? () => cubit.updatePreferences(prefs.copyWith(householdSize: prefs.householdSize - 1))
+                    : null,
+              ),
+              Text('${prefs.householdSize}', style: text.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline_rounded),
+                onPressed: prefs.householdSize < 10
+                    ? () => cubit.updatePreferences(prefs.copyWith(householdSize: prefs.householdSize + 1))
+                    : null,
+              ),
+            ],
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.flatware_rounded,
+          title: 'Default Recipe Servings',
+          subtitle: 'Recipes scale to this number of portions automatically',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline_rounded),
+                onPressed: prefs.defaultServings > 1
+                    ? () => cubit.updatePreferences(prefs.copyWith(defaultServings: prefs.defaultServings - 1))
+                    : null,
+              ),
+              Text('${prefs.defaultServings}', style: text.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline_rounded),
+                onPressed: prefs.defaultServings < 10
+                    ? () => cubit.updatePreferences(prefs.copyWith(defaultServings: prefs.defaultServings + 1))
+                    : null,
+              ),
+            ],
           ),
         ),
       ],
@@ -316,77 +741,117 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildSpeechSection(BuildContext context, UserPreferences prefs) {
     final cubit = context.read<SettingsCubit>();
-    final theme = Theme.of(context);
 
     return SettingsSection(
       title: 'Speech & Voice Assistant',
       children: [
         SettingsTile(
-          icon: Icons.language_rounded,
-          title: 'Voice Recognition Language',
-          subtitle: 'Accent and dialect for continuous voice input',
+          icon: Icons.mic_rounded,
+          title: 'Voice Input Mode & Language',
+          subtitle: 'Choose between AI audio extraction or live recognizer',
           bottomControl: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
+            child: DropdownButton<VoiceInputLanguage>(
               isExpanded: true,
               isDense: true,
-              value: prefs.speechLocale,
+              value: prefs.voiceInputLanguage,
               items: const [
-                DropdownMenuItem(value: 'en_IN', child: Text('English (India)')),
-                DropdownMenuItem(value: 'en_US', child: Text('English (US)')),
-                DropdownMenuItem(value: 'en_GB', child: Text('English (UK)')),
+                DropdownMenuItem(
+                  value: VoiceInputLanguage.auto,
+                  child: Text('Auto (AI) - Tamil, Hindi, English, Mixed'),
+                ),
+                DropdownMenuItem(
+                  value: VoiceInputLanguage.english,
+                  child: Text('Live - English (India)'),
+                ),
+                DropdownMenuItem(
+                  value: VoiceInputLanguage.tamil,
+                  child: Text('Live - Tamil (தமிழ்)'),
+                ),
+                DropdownMenuItem(
+                  value: VoiceInputLanguage.hindi,
+                  child: Text('Live - Hindi (हिंदी)'),
+                ),
               ],
               onChanged: (val) {
                 if (val != null) {
-                  cubit.updatePreferences(prefs.copyWith(speechLocale: val));
+                  cubit.updatePreferences(prefs.copyWith(voiceInputLanguage: val));
                 }
               },
             ),
           ),
         ),
         SettingsTile(
+          icon: Icons.record_voice_over_rounded,
+          title: 'Cooking Guide Language',
+          subtitle: 'Language used by the voice guide while cooking',
+          bottomControl: DropdownButtonHideUnderline(
+            child: DropdownButton<GuideLanguage>(
+              isExpanded: true,
+              isDense: true,
+              value: prefs.guideLanguage,
+              items: const [
+                DropdownMenuItem(
+                  value: GuideLanguage.english,
+                  child: Text('English'),
+                ),
+                DropdownMenuItem(
+                  value: GuideLanguage.tamil,
+                  child: Text('Tamil (தமிழ்)'),
+                ),
+                DropdownMenuItem(
+                  value: GuideLanguage.hindi,
+                  child: Text('Hindi (हिंदी)'),
+                ),
+                DropdownMenuItem(
+                  value: GuideLanguage.tanglish,
+                  child: Text('Tanglish (Tamil in English Script)'),
+                ),
+              ],
+              onChanged: (val) {
+                if (val != null) {
+                  cubit.updatePreferences(prefs.copyWith(guideLanguage: val));
+                }
+              },
+            ),
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.volume_up_rounded,
+          title: 'Spoken Feedback',
+          subtitle: 'Read steps and timer alerts aloud during cooking',
+          trailing: Switch(
+            value: prefs.voiceFeedbackEnabled,
+            activeTrackColor: AppColors.orange,
+            onChanged: (val) {
+              cubit.updatePreferences(prefs.copyWith(voiceFeedbackEnabled: val));
+            },
+          ),
+        ),
+        SettingsTile(
           icon: Icons.speed_rounded,
-          title: 'Read Aloud Speed',
-          subtitle: 'Pace used when reciting cooking steps',
+          title: 'Voice Reading Speed',
+          subtitle: 'Adjust TTS playback rate (${prefs.speechRate.toStringAsFixed(2)}x)',
           bottomControl: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Text('Slow', style: theme.textTheme.labelSmall),
-                  Expanded(
-                    child: Slider(
-                      value: prefs.speechRate,
-                      min: 0.3,
-                      max: 0.8,
-                      divisions: 5,
-                      label: '${(prefs.speechRate * 2).toStringAsFixed(1)}x',
-                      activeColor: AppColors.orange,
-                      onChanged: (val) {
-                        cubit.updatePreferences(prefs.copyWith(speechRate: val));
-                      },
-                    ),
-                  ),
-                  Text('Fast', style: theme.textTheme.labelSmall),
-                ],
+              Slider(
+                value: prefs.speechRate,
+                min: 0.5,
+                max: 1.5,
+                divisions: 10,
+                activeColor: AppColors.orange,
+                onChanged: (val) {
+                  cubit.updateSpeechRate(val);
+                },
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xs,
-                children: [
-                  AppButton(
-                    label: _isTestingSpeech ? 'Speaking...' : 'Test Voice',
-                    variant: AppButtonVariant.outlined,
-                    icon: Icons.volume_up_rounded,
-                    loading: _isTestingSpeech,
-                    onPressed: () => _testSpeech(prefs.speechRate),
-                  ),
-                  TextButton.icon(
-                    icon: const Icon(Icons.settings_voice_rounded, size: AppSizes.iconSm),
-                    label: const Text('Voice Settings'),
-                    onPressed: () => sl<TtsService>().openVoiceSettings(),
-                  ),
-                ],
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AppButton(
+                  label: _isTestingSpeech ? 'Reading...' : 'Test Voice',
+                  variant: AppButtonVariant.outlined,
+                  icon: Icons.play_arrow_rounded,
+                  loading: _isTestingSpeech,
+                  onPressed: () => _testSpeech(prefs.speechRate),
+                ),
               ),
             ],
           ),
@@ -399,57 +864,45 @@ class _ProfilePageState extends State<ProfilePage> {
     final cubit = context.read<SettingsCubit>();
 
     return SettingsSection(
-      title: 'Appearance',
+      title: 'Appearance & Accessibility',
       children: [
         SettingsTile(
-          icon: Icons.palette_rounded,
-          title: 'Theme Mode',
-          subtitle: 'Choose between system, light, or dark themes',
-          bottomControl: LayoutBuilder(
-            builder: (context, constraints) {
-              return SizedBox(
-                width: double.infinity,
-                child: SegmentedButton<ThemeMode>(
-                  showSelectedIcon: false,
-                  style: const ButtonStyle(
-                    padding: WidgetStatePropertyAll(
-                      EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                    ),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  segments: const [
-                    ButtonSegment(
-                      value: ThemeMode.system,
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('System', maxLines: 1),
-                      ),
-                      icon: Icon(Icons.brightness_auto_rounded, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: ThemeMode.light,
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('Light', maxLines: 1),
-                      ),
-                      icon: Icon(Icons.light_mode_rounded, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: ThemeMode.dark,
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('Dark', maxLines: 1),
-                      ),
-                      icon: Icon(Icons.dark_mode_rounded, size: 18),
-                    ),
-                  ],
-                  selected: {prefs.themeMode},
-                  onSelectionChanged: (selected) {
-                    cubit.updatePreferences(prefs.copyWith(themeMode: selected.first));
-                  },
-                ),
-              );
+          icon: Icons.palette_outlined,
+          title: 'App Theme',
+          subtitle: 'Select light, dark, or system mode',
+          bottomControl: SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(value: ThemeMode.system, label: Text('System')),
+              ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+              ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+            ],
+            selected: {prefs.themeMode},
+            onSelectionChanged: (val) {
+              cubit.updateThemeMode(val.first);
+            },
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.contrast_rounded,
+          title: 'High Contrast',
+          subtitle: 'Enhances border outlines and text contrast',
+          trailing: Switch(
+            value: prefs.highContrast,
+            activeTrackColor: AppColors.orange,
+            onChanged: (val) {
+              cubit.updatePreferences(prefs.copyWith(highContrast: val));
+            },
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.motion_photos_off_rounded,
+          title: 'Reduce Motion',
+          subtitle: 'Minimizes celebratory confetti and scale animations',
+          trailing: Switch(
+            value: prefs.reduceMotion,
+            activeTrackColor: AppColors.orange,
+            onChanged: (val) {
+              cubit.updatePreferences(prefs.copyWith(reduceMotion: val));
             },
           ),
         ),
@@ -461,44 +914,23 @@ class _ProfilePageState extends State<ProfilePage> {
     final cubit = context.read<SettingsCubit>();
 
     return SettingsSection(
-      title: 'Notifications',
+      title: 'Expiry Alerts & Reminders',
       children: [
         SettingsTile(
-          icon: Icons.notifications_active_rounded,
-          title: 'Daily Expiry Alerts',
-          subtitle: 'Receive reminders before ingredients expire',
+          icon: Icons.notifications_active_outlined,
+          title: 'Daily Expiry Notifications',
+          subtitle: 'Alerts you about critical and high priority items',
           trailing: Switch(
             value: prefs.notificationsEnabled,
             activeTrackColor: AppColors.orange,
             onChanged: (val) {
-              cubit.updatePreferences(prefs.copyWith(notificationsEnabled: val));
+              cubit.updateNotificationsEnabled(val);
             },
           ),
         ),
         if (prefs.notificationsEnabled) ...[
           SettingsTile(
-            icon: Icons.access_time_rounded,
-            title: 'Alert Time',
-            subtitle: '${prefs.notifyHour.toString().padLeft(2, '0')}:${prefs.notifyMinute.toString().padLeft(2, '0')}',
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () async {
-              final picked = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay(
-                  hour: prefs.notifyHour,
-                  minute: prefs.notifyMinute,
-                ),
-              );
-              if (picked != null) {
-                cubit.updatePreferences(prefs.copyWith(
-                  notifyHour: picked.hour,
-                  notifyMinute: picked.minute,
-                ));
-              }
-            },
-          ),
-          SettingsTile(
-            title: 'Alert Day Before Expiry',
+            title: 'Alert 1 Day Before Expiry',
             trailing: Switch(
               value: prefs.notifyDayBefore,
               activeTrackColor: AppColors.orange,
@@ -533,7 +965,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildEstimatesSection(BuildContext context, UserPreferences prefs) {
     final theme = Theme.of(context);
     final cubit = context.read<SettingsCubit>();
-    const currencies = ['₹', '\$', '€', '£'];
+    const currencies = ['₹', '\$', '€', '£', '¥', 'A\$', 'C\$'];
 
     return SettingsSection(
       title: 'Savings Estimates & Currency',
@@ -606,20 +1038,116 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildAiDiagnosticsSection(BuildContext context, UserPreferences prefs) {
+    final cubit = context.read<SettingsCubit>();
+    final geminiDs = sl.isRegistered<GeminiRemoteDataSource>()
+        ? sl<GeminiRemoteDataSource>()
+        : null;
+    final currentStatus = _testedAiStatus ?? geminiDs?.lastStatus ?? const AiStatus(
+      state: AiConnectionState.untested,
+      message: 'Checking AI status...',
+    );
+
+    final (statusColor, statusIcon, statusHeadline) = switch (currentStatus.state) {
+      AiConnectionState.ok => (
+          AppColors.low,
+          Icons.check_circle_rounded,
+          'Connected to Gemini (${currentStatus.activeModel ?? "flash"})',
+        ),
+      AiConnectionState.noKey => (
+          AppColors.medium,
+          Icons.key_off_rounded,
+          'No API key set (Running in offline mode)',
+        ),
+      AiConnectionState.authError => (
+          AppColors.critical,
+          Icons.error_outline_rounded,
+          'Invalid Gemini API key (401/403)',
+        ),
+      AiConnectionState.modelNotFound => (
+          AppColors.medium,
+          Icons.search_off_rounded,
+          'Model 404 (Auto-fallback to gemini-flash-latest)',
+        ),
+      AiConnectionState.quotaExceeded => (
+          AppColors.medium,
+          Icons.timer_outlined,
+          'Gemini rate limited (429 - waiting)',
+        ),
+      AiConnectionState.offline || AiConnectionState.timeout => (
+          AppColors.medium,
+          Icons.wifi_off_rounded,
+          'Network timeout (Using offline fallback)',
+        ),
+      AiConnectionState.badResponse => (
+          AppColors.critical,
+          Icons.warning_amber_rounded,
+          'Bad response from AI endpoint',
+        ),
+      _ => (
+          AppColors.unknown,
+          Icons.help_outline_rounded,
+          'AI status untested',
+        ),
+    };
+
+    return SettingsSection(
+      title: 'AI Connection Diagnostics',
+      children: [
+        SettingsTile(
+          icon: statusIcon,
+          title: statusHeadline,
+          subtitle: currentStatus.message ??
+              (currentStatus.state == AiConnectionState.ok
+                  ? 'Voice extraction and recipe inspiration are running at peak speed.'
+                  : 'Curated offline recipes and local speech extraction remain fully active.'),
+          bottomControl: Align(
+            alignment: Alignment.centerLeft,
+            child: AppButton(
+              label: _isTestingAi ? 'Testing...' : 'Test AI Connection',
+              variant: AppButtonVariant.outlined,
+              icon: Icons.network_check_rounded,
+              loading: _isTestingAi,
+              onPressed: _testAiConnection,
+            ),
+          ),
+        ),
+        SettingsTile(
+          icon: Icons.image_outlined,
+          title: 'Generate Dish Illustrations with AI',
+          subtitle: 'Experimental Imagen illustration if real photo is not found',
+          trailing: Switch(
+            value: prefs.allowAiIllustration,
+            activeTrackColor: AppColors.orange,
+            onChanged: (val) {
+              cubit.updatePreferences(prefs.copyWith(allowAiIllustration: val));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDataManagementSection(BuildContext context) {
     return SettingsSection(
-      title: 'Data & Storage',
+      title: 'Data & Privacy',
       children: [
         SettingsTile(
           icon: Icons.storage_rounded,
-          title: 'Local Data Controls',
-          subtitle: 'Manage local Hive database and test data',
+          title: 'Data Backup & Controls',
+          subtitle: 'Export data as JSON, load test inventory, or reset app',
           bottomControl: Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
               AppButton(
-                label: 'Load Demo Data',
+                label: 'Export Data (JSON)',
+                variant: AppButtonVariant.outlined,
+                icon: Icons.file_upload_outlined,
+                onPressed: () => _exportKitchenData(context),
+              ),
+              AppButton(
+                label: 'Load Demo Pantry',
                 variant: AppButtonVariant.outlined,
                 icon: Icons.download_rounded,
                 onPressed: () async {
@@ -627,7 +1155,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   await context.read<InventoryCubit>().addMany(items);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Loaded ${items.length} demo ingredients.')),
+                      SnackBar(content: Text('Loaded ${items.length} demo pantry items.')),
                     );
                   }
                 },
@@ -646,7 +1174,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 },
               ),
               AppButton(
-                label: 'Clear All My Data',
+                label: 'Delete Everything',
                 variant: AppButtonVariant.outlined,
                 icon: Icons.delete_forever_rounded,
                 onPressed: () => _showClearConfirmation(context),
@@ -664,7 +1192,7 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (dialogCtx) => AlertDialog(
         title: const Text('Clear All Data?'),
         content: const Text(
-          'This will permanently delete all your inventory items and reset settings. This action cannot be undone.',
+          'This will permanently delete all your inventory items, saved recipes, and reset settings. This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -689,15 +1217,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildAboutSection(BuildContext context) {
     return const SettingsSection(
-      title: 'About RescueRecipe',
+      title: 'About & Credits',
       children: [
         SettingsTile(
           icon: Icons.info_outline_rounded,
           title: 'RescueRecipe v1.0.0',
           subtitle: 'Speak your ingredients, rescue your food, reduce food waste.\n\n'
-              '• AI suggestions are intended for inspiration only and do not constitute food safety advice.\n'
-              '• Savings amounts and streaks are illustrative estimates and game mechanics.\n'
-              '• Recipe photos sourced from Wikipedia under Creative Commons.',
+              '• Photos provided by Pexels (licensed under Pexels License).\n'
+              '• Recipe structure and techniques inspired by TheMealDB & Wikipedia.\n'
+              '• AI suggestions are intended for inspiration only and do not guarantee food safety.\n'
+              '• Savings amounts and streaks are illustrative estimates and game mechanics.',
         ),
       ],
     );
