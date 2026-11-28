@@ -247,7 +247,6 @@ class GeminiRemoteDataSourceImpl implements GeminiRemoteDataSource {
         if (rawName == null || rawName.isEmpty) continue;
 
         final spokenName = raw['spokenName'] as String?;
-        final canonical = IngredientVocabulary.resolve(rawName);
 
         final qtyVal = raw['quantity'];
         double? qty;
@@ -256,12 +255,15 @@ class GeminiRemoteDataSourceImpl implements GeminiRemoteDataSource {
         } else if (qtyVal is String) {
           qty = double.tryParse(qtyVal);
         }
+        if (qty != null && (qty <= 0 || qty > 10000)) {
+          qty = null;
+        }
 
         final unit = (raw['unit'] as String?)?.toLowerCase().trim();
         final expiry = (raw['expiryPhrase'] as String?)?.trim();
 
         result.add(ExtractedIngredient(
-          name: canonical,
+          name: rawName,
           spokenName: spokenName ?? rawName,
           quantity: qty,
           unit: unit?.isEmpty == true ? null : unit,
@@ -276,7 +278,8 @@ class GeminiRemoteDataSourceImpl implements GeminiRemoteDataSource {
         lastChecked: DateTime.now(),
         message: 'JSON parse error: $e',
       );
-      throw UnexpectedFailure('Invalid JSON response from Gemini API: $e');
+      if (e is Failure) rethrow;
+      throw ParsingFailure('Invalid JSON response from Gemini API: $e');
     }
   }
 

@@ -37,8 +37,10 @@ import '../../features/notifications/domain/usecases/request_notification_permis
 import '../../features/notifications/domain/usecases/sync_expiry_alerts.dart';
 import '../../features/recipes/data/datasources/gemini_recipe_datasource.dart';
 import '../../features/recipes/data/datasources/preferences_local_datasource.dart';
+import '../../features/recipes/data/datasources/saved_recipe_repository.dart';
 import '../../features/recipes/data/repositories/recipe_repository_impl.dart';
 import '../../features/recipes/domain/repositories/recipe_repository.dart';
+import '../../features/recipes/domain/services/dish_image_resolver.dart';
 import '../../features/recipes/domain/usecases/generate_recipes.dart';
 import '../../features/recipes/domain/usecases/get_diet_preference.dart';
 import '../../features/recipes/domain/usecases/get_recipe_by_id.dart';
@@ -444,12 +446,36 @@ Future<void> configureDependencies({
     );
   }
 
+  // Saved Recipe Repository & Dish Image Resolver
+  if (!sl.isRegistered<SavedRecipeRepository>()) {
+    sl.registerLazySingleton<SavedRecipeRepository>(
+      () => SavedRecipeRepository(
+        savedRecipesBox: Hive.isBoxOpen('saved_recipes')
+            ? Hive.box<String>('saved_recipes')
+            : preferencesBox ?? Hive.box<String>('preferences'),
+        cacheBox: Hive.isBoxOpen('recipe_cache')
+            ? Hive.box<String>('recipe_cache')
+            : preferencesBox ?? Hive.box<String>('preferences'),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<DishImageResolver>()) {
+    sl.registerLazySingleton<DishImageResolver>(
+      () => DishImageResolver(
+        client: sl<http.Client>(),
+        cacheBox: Hive.isBoxOpen('recipe_cache') ? Hive.box<String>('recipe_cache') : null,
+      ),
+    );
+  }
+
   // Recipes Bloc
   if (!sl.isRegistered<RecipesBloc>()) {
     sl.registerFactory<RecipesBloc>(
       () => RecipesBloc(
         generateRecipes: sl<GenerateRecipes>(),
         updateDietPreference: sl<UpdateDietPreference>(),
+        savedRecipeRepository: sl<SavedRecipeRepository>(),
       ),
     );
   }

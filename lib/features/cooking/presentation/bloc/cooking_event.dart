@@ -31,6 +31,26 @@ class StepRepeatTriggered extends CookingEvent {
   const StepRepeatTriggered();
 }
 
+class StartStepTimer extends CookingEvent {
+  final int seconds;
+  const StartStepTimer(this.seconds);
+
+  @override
+  List<Object?> get props => [seconds];
+}
+
+class StopStepTimer extends CookingEvent {
+  const StopStepTimer();
+}
+
+class TimerTickReceived extends CookingEvent {
+  final int remainingSeconds;
+  const TimerTickReceived(this.remainingSeconds);
+
+  @override
+  List<Object?> get props => [remainingSeconds];
+}
+
 class StepGoToTriggered extends CookingEvent {
   final int stepNumber; // 1-based
 

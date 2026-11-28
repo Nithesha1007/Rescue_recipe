@@ -57,6 +57,18 @@ class CommandTip extends VoiceCommand {
   const CommandTip();
 }
 
+class CommandStartTimer extends VoiceCommand {
+  final int? minutes;
+  const CommandStartTimer([this.minutes]);
+
+  @override
+  List<Object?> get props => [minutes];
+}
+
+class CommandStopTimer extends VoiceCommand {
+  const CommandStopTimer();
+}
+
 class CommandFinish extends VoiceCommand {
   const CommandFinish();
 }

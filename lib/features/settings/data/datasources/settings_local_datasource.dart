@@ -19,11 +19,13 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
   static const String _speechRateKey = 'speech_rate';
   static const String _themeModeKey = 'theme_mode';
   static const String _currencyKey = 'currency_symbol';
+  static const String _customItemValueKey = 'custom_item_value';
   static const String _notificationsEnabledKey = 'notifications_enabled';
   static const String _notifyHourKey = 'notify_hour';
   static const String _notifyMinuteKey = 'notify_minute';
   static const String _notifyDayBeforeKey = 'notify_day_before';
   static const String _notifyOnExpiryDayKey = 'notify_on_expiry_day';
+  static const String _hasCompletedOnboardingKey = 'has_completed_onboarding';
 
   SettingsLocalDataSourceImpl(this._preferencesBox);
 
@@ -48,11 +50,15 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
     };
 
     final currency = _preferencesBox.get(_currencyKey, defaultValue: '₹') ?? '₹';
+    final customValStr = _preferencesBox.get(_customItemValueKey);
+    final customVal = customValStr != null ? double.tryParse(customValStr) : null;
+
     final notifEnabled = _preferencesBox.get(_notificationsEnabledKey, defaultValue: 'true') == 'true';
     final notifyHour = int.tryParse(_preferencesBox.get(_notifyHourKey, defaultValue: '9') ?? '9') ?? 9;
     final notifyMinute = int.tryParse(_preferencesBox.get(_notifyMinuteKey, defaultValue: '0') ?? '0') ?? 0;
     final notifyDayBefore = _preferencesBox.get(_notifyDayBeforeKey, defaultValue: 'true') == 'true';
     final notifyOnExpiryDay = _preferencesBox.get(_notifyOnExpiryDayKey, defaultValue: 'true') == 'true';
+    final hasOnboarded = _preferencesBox.get(_hasCompletedOnboardingKey, defaultValue: 'false') == 'true';
 
     return UserPreferences(
       diet: diet,
@@ -61,11 +67,13 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
       speechRate: speechRate.clamp(0.3, 0.8),
       themeMode: themeMode,
       currencySymbol: currency,
+      customItemValue: customVal,
       notificationsEnabled: notifEnabled,
       notifyHour: notifyHour,
       notifyMinute: notifyMinute,
       notifyDayBefore: notifyDayBefore,
       notifyOnExpiryDay: notifyOnExpiryDay,
+      hasCompletedOnboarding: hasOnboarded,
     );
   }
 
@@ -77,11 +85,17 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
     await _preferencesBox.put(_speechRateKey, preferences.speechRate.toString());
     await _preferencesBox.put(_themeModeKey, preferences.themeMode.name);
     await _preferencesBox.put(_currencyKey, preferences.currencySymbol);
+    if (preferences.customItemValue != null) {
+      await _preferencesBox.put(_customItemValueKey, preferences.customItemValue.toString());
+    } else {
+      await _preferencesBox.delete(_customItemValueKey);
+    }
     await _preferencesBox.put(_notificationsEnabledKey, preferences.notificationsEnabled.toString());
     await _preferencesBox.put(_notifyHourKey, preferences.notifyHour.toString());
     await _preferencesBox.put(_notifyMinuteKey, preferences.notifyMinute.toString());
     await _preferencesBox.put(_notifyDayBeforeKey, preferences.notifyDayBefore.toString());
     await _preferencesBox.put(_notifyOnExpiryDayKey, preferences.notifyOnExpiryDay.toString());
+    await _preferencesBox.put(_hasCompletedOnboardingKey, preferences.hasCompletedOnboarding.toString());
   }
 
   @override

@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../domain/entities/ingredient.dart';
 import '../../domain/utils/expiry_date_resolver.dart';
+import 'quick_expiry_chips.dart';
 
 class IngredientFormSheet extends StatefulWidget {
   const IngredientFormSheet({
@@ -269,7 +270,21 @@ class _IngredientFormSheetState extends State<IngredientFormSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.sm),
+                // Quick Expiry Chips
+                QuickExpiryChips(
+                  selectedDate: _selectedDate,
+                  onDateSelected: (date) {
+                    setState(() {
+                      _selectedDate = date;
+                      _phraseController.clear();
+                      _phraseUnrecognized = false;
+                      _phraseResolvedPreview =
+                          date != null ? _formatDate(date) : null;
+                    });
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 // Natural language phrase resolver
                 TextFormField(
                   controller: _phraseController,

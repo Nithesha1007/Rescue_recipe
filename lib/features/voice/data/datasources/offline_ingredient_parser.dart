@@ -75,8 +75,14 @@ abstract final class OfflineIngredientParser {
     }
 
     // 3. Remove expiry clauses from ingredient scanning
+    // First, remove separate clauses like "my tomatoes expire tomorrow"
     cleanedText = cleanedText.replaceAll(
-      RegExp(r'(?:my\s+)?[a-zA-Z\s]+\s+(?:expires|expire|expiring)\s+[a-zA-Z0-9\s]+(?:[\.,;]|$)', caseSensitive: false),
+      RegExp(r'\bmy\s+[a-zA-Z]+\s+(?:expires|expire|expiring)\s+[a-zA-Z0-9\s]+(?:[\.,;]|$)', caseSensitive: false),
+      ' ',
+    );
+    // Next, remove inline expiry phrases like "expiring in 3 days" leaving the ingredient name
+    cleanedText = cleanedText.replaceAll(
+      RegExp(r'\b(?:expires|expire|expiring)\s+[a-zA-Z0-9\s]+?(?=(?:,|and\b|$))', caseSensitive: false),
       ' ',
     );
 
@@ -150,7 +156,13 @@ abstract final class OfflineIngredientParser {
   static (double?, String?) _extractQuantityAndUnit(String text) {
     if (text.isEmpty) return (null, null);
 
-    final lower = text.toLowerCase().trim();
+    final clean = text.replaceAll(RegExp(r'\bof(?:\s+the)?\s*$', caseSensitive: false), '').trim();
+    final lower = clean.toLowerCase();
+
+    // Check vague quantities
+    if (lower.endsWith('some') || lower.endsWith('a bit') || lower.endsWith('a handful') || lower.endsWith('handful')) {
+      return (null, null);
+    }
 
     // Check numeric digit
     final digitMatch = RegExp(r'(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?$').firstMatch(lower);
@@ -211,7 +223,7 @@ abstract final class OfflineIngredientParser {
   static Map<String, String> _extractExpiryMap(String text) {
     final Map<String, String> map = {};
     final RegExp expiryPattern = RegExp(
-      r'(?:my\s+)?([a-zA-Z]+)\s+(?:expires|expire|expiring)\s+(.+?)(?:[\.,;]|$)',
+      r'(?:my\s+)?([a-zA-Z]+)\s+(?:expires|expire|expiring)\s+(.+?)(?:[\.,;]|and\b|$)',
       caseSensitive: false,
     );
 

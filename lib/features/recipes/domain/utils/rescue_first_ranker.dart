@@ -142,19 +142,17 @@ class RescueFirstRanker {
 
       // 4. Preference score: Average of diet and cuisine components (maintaining 0.10 weight)
       final double dietComponent = dietPreference == DietTag.none ? 0.5 : 1.0;
-      final double cuisineComponent;
+      final double preferenceScore;
       if (cuisinePreference == CuisineTag.any) {
-        cuisineComponent = 0.5;
+        preferenceScore = dietComponent;
       } else {
         final recCuisine = recipe.cuisine?.toLowerCase() ?? '';
         final prefCuisine = cuisinePreference.displayName.toLowerCase();
-        if (recCuisine.contains(prefCuisine) || prefCuisine.contains(recCuisine)) {
-          cuisineComponent = 1.0;
-        } else {
-          cuisineComponent = 0.2;
-        }
+        final double cuisineComponent = (recCuisine.contains(prefCuisine) || prefCuisine.contains(recCuisine))
+            ? 1.0
+            : 0.2;
+        preferenceScore = (dietComponent + cuisineComponent) / 2.0;
       }
-      final double preferenceScore = (dietComponent + cuisineComponent) / 2.0;
 
       // Total Score
       final double totalScore = (coverageWeight * coverageScore) +
@@ -205,11 +203,10 @@ class RescueFirstRanker {
       final totalCount = expiringItems.length;
 
       // Construct verified reason (validated for safety and disclaimers)
-      final rawReason = _buildReason(
+      final rawReason = _buildSpecificReason(
         recipe: recipe,
-        coveredCount: coveredCount,
-        totalCount: totalCount,
-        usedExpiringNames: usedExpiringIngredients.map((e) => e.name).toList(),
+        usedExpiringItems: usedExpiringIngredients.toList(),
+        today: todayDate,
         isAllOnHand: missingIngredients.isEmpty && needMoreIngredients.isEmpty,
       );
       final validatedReason = ReasonValidator.sanitize(rawReason);
@@ -262,29 +259,26 @@ class RescueFirstRanker {
     return rankedList;
   }
 
-  static String _buildReason({
+  static String _buildSpecificReason({
     required Recipe recipe,
-    required int coveredCount,
-    required int totalCount,
-    required List<String> usedExpiringNames,
+    required List<Ingredient> usedExpiringItems,
+    required DateTime today,
     required bool isAllOnHand,
   }) {
-    if (recipe.aiReason != null && recipe.aiReason!.isNotEmpty) {
-      return recipe.aiReason!;
-    }
+    if (usedExpiringItems.isNotEmpty) {
+      final parts = usedExpiringItems.take(2).map((item) {
+        final p = item.priority(today: today);
+        final label = p.name.substring(0, 1).toUpperCase() + p.name.substring(1);
+        return '${item.displayName} ($label priority)';
+      }).join(' and ');
 
-    if (coveredCount > 0) {
-      final names = usedExpiringNames.take(2).join(' and ');
-      if (isAllOnHand) {
-        return 'Rescues your $names with everything already on hand.';
-      }
-      return 'Rescues $coveredCount of your expiring ingredients ($names).';
+      return 'Rescues your $parts';
     }
 
     if (isAllOnHand) {
-      return 'Ready in ${recipe.minutes} mins with everything on hand.';
+      return 'Makes the most of what you already have.';
     }
 
-    return 'Uses your active ingredients with minimal extra items needed.';
+    return 'Uses your active ingredients with minimal extra items needed';
   }
 }

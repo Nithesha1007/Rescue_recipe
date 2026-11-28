@@ -23,6 +23,8 @@ class CookingState extends Equatable {
   final int totalDeducted;
   final String? errorMessage;
   final bool isSafetyPromptSpoken;
+  final int? timerSecondsRemaining;
+  final bool isTimerActive;
 
   const CookingState({
     this.flowStatus = CookingFlowStatus.initial,
@@ -34,6 +36,8 @@ class CookingState extends Equatable {
     this.totalDeducted = 0,
     this.errorMessage,
     this.isSafetyPromptSpoken = false,
+    this.timerSecondsRemaining,
+    this.isTimerActive = false,
   });
 
   bool get isPaused => flowStatus == CookingFlowStatus.paused;
@@ -48,6 +52,8 @@ class CookingState extends Equatable {
     int? totalDeducted,
     String? errorMessage,
     bool? isSafetyPromptSpoken,
+    int? Function()? timerSecondsRemaining,
+    bool? isTimerActive,
   }) {
     return CookingState(
       flowStatus: flowStatus ?? this.flowStatus,
@@ -59,6 +65,8 @@ class CookingState extends Equatable {
       totalDeducted: totalDeducted ?? this.totalDeducted,
       errorMessage: errorMessage,
       isSafetyPromptSpoken: isSafetyPromptSpoken ?? this.isSafetyPromptSpoken,
+      timerSecondsRemaining: timerSecondsRemaining != null ? timerSecondsRemaining() : this.timerSecondsRemaining,
+      isTimerActive: isTimerActive ?? this.isTimerActive,
     );
   }
 
@@ -73,5 +81,7 @@ class CookingState extends Equatable {
         totalDeducted,
         errorMessage,
         isSafetyPromptSpoken,
+        timerSecondsRemaining,
+        isTimerActive,
       ];
 }

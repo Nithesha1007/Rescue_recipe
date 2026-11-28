@@ -48,6 +48,9 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     on<DeductionProposalToggled>(_onDeductionToggled);
     on<ConfirmDeductionsAndFinish>(_onConfirmDeductionsAndFinish);
     on<CookingExited>(_onCookingExited);
+    on<StartStepTimer>(_onStartStepTimer);
+    on<StopStepTimer>(_onStopStepTimer);
+    on<TimerTickReceived>(_onTimerTickReceived);
 
     // Listen to voice controller streams
     _audioStateSub = _voiceController.stateStream.listen(
@@ -344,6 +347,15 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
           }
         }
         break;
+      case CommandStartTimer(:final minutes):
+        final stepMinutes = minutes ??
+            state.session?.recipe.steps[state.session!.currentStepIndex].minutes ??
+            1;
+        add(StartStepTimer(stepMinutes * 60));
+        break;
+      case CommandStopTimer():
+        add(const StopStepTimer());
+        break;
       case CommandFinish():
         add(const FinishCookingRequested());
         break;
@@ -456,6 +468,62 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
     );
   }
 
+  Timer? _countdownTimer;
+
+  void _onStartStepTimer(
+    StartStepTimer event,
+    Emitter<CookingState> emit,
+  ) {
+    _countdownTimer?.cancel();
+    emit(state.copyWith(
+      timerSecondsRemaining: () => event.seconds,
+      isTimerActive: true,
+      spokenFeedback: 'Timer started for ${event.seconds ~/ 60 > 0 ? "${event.seconds ~/ 60} minutes" : "${event.seconds} seconds"}.',
+    ));
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final current = state.timerSecondsRemaining ?? 0;
+      if (current <= 1) {
+        timer.cancel();
+        add(const TimerTickReceived(0));
+      } else {
+        add(TimerTickReceived(current - 1));
+      }
+    });
+  }
+
+  void _onStopStepTimer(
+    StopStepTimer event,
+    Emitter<CookingState> emit,
+  ) {
+    _countdownTimer?.cancel();
+    emit(state.copyWith(
+      timerSecondsRemaining: () => null,
+      isTimerActive: false,
+      spokenFeedback: 'Timer stopped.',
+    ));
+  }
+
+  Future<void> _onTimerTickReceived(
+    TimerTickReceived event,
+    Emitter<CookingState> emit,
+  ) async {
+    if (event.remainingSeconds <= 0) {
+      _countdownTimer?.cancel();
+      emit(state.copyWith(
+        timerSecondsRemaining: () => 0,
+        isTimerActive: false,
+        spokenFeedback: 'Timer done!',
+      ));
+      await _voiceController.speak('Timer done!');
+      if (!isClosed && state.flowStatus == CookingFlowStatus.running) {
+        _voiceController.startListening();
+      }
+    } else {
+      emit(state.copyWith(timerSecondsRemaining: () => event.remainingSeconds));
+    }
+  }
+
   Future<void> _onCookingExited(
     CookingExited event,
     Emitter<CookingState> emit,
@@ -466,6 +534,7 @@ class CookingBloc extends Bloc<CookingEvent, CookingState> {
 
   @override
   Future<void> close() {
+    _countdownTimer?.cancel();
     _audioStateSub?.cancel();
     _commandSub?.cancel();
     _voiceController.dispose();

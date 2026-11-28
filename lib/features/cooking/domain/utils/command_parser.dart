@@ -116,6 +116,16 @@ class CommandParser {
       return const CommandTip();
     }
 
+    // 11b. Check for Timer commands
+    if (cleaned.contains('stop timer') || cleaned.contains('cancel timer')) {
+      return const CommandStopTimer();
+    }
+    if (cleaned.contains('start timer') || cleaned.contains('set timer') || cleaned.contains('set a timer') || cleaned.contains('timer')) {
+      final match = RegExp(r'(\d+)\s*(mins?|minutes?)').firstMatch(cleaned);
+      final minutes = match != null ? int.tryParse(match.group(1)!) : null;
+      return CommandStartTimer(minutes);
+    }
+
     // 12. Check for Ask quantity: "how much / many [ingredient]"
     final quantityQuery = _extractQuantityQuery(cleaned);
     if (quantityQuery != null && quantityQuery.isNotEmpty) {
@@ -376,14 +386,7 @@ class CommandParser {
     final stripped = _stripFillers(tokens);
     final phrase = stripped.join(' ');
 
-    if (phrase == 'tip' ||
-        phrase == 'tips' ||
-        phrase == 'any tips' ||
-        phrase == 'give me a tip' ||
-        phrase == 'cooking tip' ||
-        phrase == 'what is the tip' ||
-        phrase == 'got any tips' ||
-        phrase == 'advice') {
+    if (phrase.contains('tip') || phrase.contains('tips') || phrase.contains('advice')) {
       return true;
     }
 

@@ -7,7 +7,9 @@ import 'substitution.dart';
 
 enum RecipeSource {
   gemini('AI recipes'),
-  offline('Offline recipes');
+  cachedAi('Last AI result'),
+  saved('Saved recipes'),
+  offline('Bundled recipes');
 
   const RecipeSource(this.label);
   final String label;
@@ -28,6 +30,7 @@ class Recipe extends Equatable {
     this.cuisine,
     this.difficulty = 'Easy',
     this.tips = const <String>[],
+    this.imageQuery,
   });
 
   final String id;
@@ -43,6 +46,7 @@ class Recipe extends Equatable {
   final String? cuisine;
   final String difficulty;
   final List<String> tips;
+  final String? imageQuery;
 
   @override
   List<Object?> get props => [
@@ -59,5 +63,40 @@ class Recipe extends Equatable {
         cuisine,
         difficulty,
         tips,
+        imageQuery,
       ];
+
+  Recipe copyWith({
+    String? id,
+    String? title,
+    int? minutes,
+    int? servings,
+    Set<DietTag>? dietTags,
+    List<RecipeIngredient>? ingredients,
+    List<RecipeStep>? steps,
+    List<Substitution>? substitutions,
+    String? aiReason,
+    RecipeSource? source,
+    String? cuisine,
+    String? difficulty,
+    List<String>? tips,
+    String? imageQuery,
+  }) {
+    return Recipe(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      minutes: minutes ?? this.minutes,
+      servings: servings ?? this.servings,
+      dietTags: dietTags ?? this.dietTags,
+      ingredients: ingredients ?? this.ingredients,
+      steps: steps ?? this.steps,
+      substitutions: substitutions ?? this.substitutions,
+      aiReason: aiReason ?? this.aiReason,
+      source: source ?? this.source,
+      cuisine: cuisine ?? this.cuisine,
+      difficulty: difficulty ?? this.difficulty,
+      tips: tips ?? this.tips,
+      imageQuery: imageQuery ?? this.imageQuery,
+    );
+  }
 }

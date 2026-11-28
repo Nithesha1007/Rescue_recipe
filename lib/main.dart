@@ -88,6 +88,8 @@ Future<void> main() async {
   await Hive.openBox<IngredientModel>('ingredients');
   await Hive.openBox<String>('preferences');
   await Hive.openBox<UsageLogModel>('usage_log');
+  await Hive.openBox<String>('saved_recipes');
+  await Hive.openBox<String>('recipe_cache');
   await configureDependencies();
   runApp(const RescueRecipeApp());
 }

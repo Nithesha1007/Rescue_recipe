@@ -286,6 +286,9 @@ abstract final class IngredientVocabulary {
     'cashews': 'cashews',
     'mundhiri': 'cashews',
     'kaju': 'cashews',
+    'nut': 'nut',
+    'nuts': 'nut',
+    'yoghurt': 'yoghurt',
   };
 
   /// Sorted list of aliases by descending character length to enable greedy longest-match scanning.

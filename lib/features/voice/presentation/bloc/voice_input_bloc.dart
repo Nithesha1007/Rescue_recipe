@@ -1,7 +1,5 @@
 import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import '../../../../core/utils/debug_logger.dart';
 import '../../domain/entities/extracted_ingredient.dart';
 import '../../domain/repositories/speech_repository.dart';

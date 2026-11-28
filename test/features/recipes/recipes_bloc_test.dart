@@ -55,7 +55,7 @@ void main() {
     late GenerateRecipes generateRecipes;
     late UpdateDietPreference updateDietPreference;
 
-    final today = DateTime(2026, 11, 26);
+    final today = DateTime.now();
 
     setUp(() {
       fakeIngredientRepo = FakeIngredientRepository();

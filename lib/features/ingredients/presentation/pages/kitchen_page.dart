@@ -13,6 +13,7 @@ import '../../../../core/widgets/priority_chip.dart';
 import '../../../../core/widgets/responsive_builder.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../domain/entities/ingredient.dart';
+import '../../domain/utils/glued_ingredient_splitter.dart';
 import '../cubit/inventory_cubit.dart';
 import '../cubit/inventory_state.dart';
 import '../widgets/ingredient_form_sheet.dart';
@@ -62,6 +63,53 @@ class _KitchenPageState extends State<KitchenPage> {
           );
       }
     });
+  }
+
+  void _splitGluedItem(Ingredient item) {
+    final splitItems = GluedIngredientSplitter.split(item);
+    if (splitItems.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not find multiple recognizable ingredients to split.')),
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Split Ingredients'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Split "${item.name}" into ${splitItems.length} items?'),
+            const SizedBox(height: 12),
+            for (final s in splitItems)
+              Text('• ${s.name} (${s.quantity != null ? "${s.quantity} " : ""}${s.unit ?? ""})'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dlgCtx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(dlgCtx).pop();
+              final cubit = context.read<InventoryCubit>();
+              await cubit.delete(item.id);
+              await cubit.addMany(splitItems);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Split into ${splitItems.length} separate ingredients!')),
+                );
+              }
+            },
+            child: const Text('Split Items'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _markUsed(Ingredient item) {
@@ -162,6 +210,16 @@ class _KitchenPageState extends State<KitchenPage> {
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _openEditSheet(item);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.call_split_rounded, color: AppColors.orange),
+                title: const Text('Split into separate items'),
+                subtitle: const Text('Separates glued items into individual ingredients'),
+                minVerticalPadding: AppSpacing.md,
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _splitGluedItem(item);
                 },
               ),
               ListTile(
@@ -437,11 +495,15 @@ class _InventoryListView extends StatelessWidget {
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

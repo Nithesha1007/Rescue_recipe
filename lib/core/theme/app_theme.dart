@@ -32,6 +32,35 @@ abstract final class AppColors {
   static const Color onLow = Color(0xFFFFFFFF);
   static const Color unknown = Color(0xFF616161);
   static const Color onUnknown = Color(0xFFFFFFFF);
+
+  // Common neutral fills
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black45 = Color(0x73000000);
+
+  // Confetti celebrations
+  static const Color confettiOrange = Color(0xFFFF8A3D);
+  static const Color confettiGreen = Color(0xFF7BD389);
+  static const Color confettiYellow = Color(0xFFFFC107);
+  static const Color confettiBlue = Color(0xFF29B6F6);
+  static const Color confettiPurple = Color(0xFFAB47BC);
+  static const Color confettiRed = Color(0xFFFF5252);
+
+  // Score breakdown orange ramp
+  static const Color breakdownOrangeDark = Color(0xFFD84315);
+  static const Color breakdownOrangeMed = Color(0xFFFFB74D);
+  static const Color breakdownOrangeLight = Color(0xFFFFCC80);
+
+  // DishArt palette gradients
+  static const Color dishArtAmber1 = Color(0xFFE65100);
+  static const Color dishArtAmber2 = Color(0xFFF57C00);
+  static const Color dishArtPink1 = Color(0xFFC2185B);
+  static const Color dishArtPink2 = Color(0xFFE91E63);
+  static const Color dishArtRed1 = Color(0xFFD32F2F);
+  static const Color dishArtRed2 = Color(0xFFFF5252);
+  static const Color dishArtGreen1 = Color(0xFF2E7D32);
+  static const Color dishArtGreen2 = Color(0xFF4CAF50);
+  static const Color dishArtWarm1 = Color(0xFFD84315);
+  static const Color dishArtWarm2 = Color(0xFFFF8A3D);
 }
 
 // -------------------------------------------------------------- Scales
@@ -77,34 +106,90 @@ abstract final class AppDurations {
 }
 
 abstract final class AppTypography {
+  static const String headingFont = 'Fraunces';
+  static const String bodyFont = 'Manrope';
+
   static TextTheme textTheme(Color color) {
     return const TextTheme(
-      displaySmall:
-          TextStyle(fontSize: 32, height: 1.2, fontWeight: FontWeight.w700),
-      headlineMedium:
-          TextStyle(fontSize: 28, height: 1.25, fontWeight: FontWeight.w700),
-      headlineSmall:
-          TextStyle(fontSize: 24, height: 1.25, fontWeight: FontWeight.w700),
-      titleLarge:
-          TextStyle(fontSize: 22, height: 1.3, fontWeight: FontWeight.w600),
-      titleMedium:
-          TextStyle(fontSize: 16, height: 1.35, fontWeight: FontWeight.w600),
-      titleSmall:
-          TextStyle(fontSize: 14, height: 1.35, fontWeight: FontWeight.w600),
-      bodyLarge:
-          TextStyle(fontSize: 16, height: 1.45, fontWeight: FontWeight.w400),
-      bodyMedium:
-          TextStyle(fontSize: 14, height: 1.45, fontWeight: FontWeight.w400),
-      bodySmall:
-          TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w400),
-      labelLarge:
-          TextStyle(fontSize: 14, height: 1.3, fontWeight: FontWeight.w600),
-      labelMedium:
-          TextStyle(fontSize: 12, height: 1.3, fontWeight: FontWeight.w600),
-      labelSmall:
-          TextStyle(fontSize: 11, height: 1.3, fontWeight: FontWeight.w500),
+      displaySmall: TextStyle(
+        fontFamily: headingFont,
+        fontSize: 32,
+        height: 1.2,
+        fontWeight: FontWeight.w700,
+      ),
+      headlineMedium: TextStyle(
+        fontFamily: headingFont,
+        fontSize: 28,
+        height: 1.25,
+        fontWeight: FontWeight.w700,
+      ),
+      headlineSmall: TextStyle(
+        fontFamily: headingFont,
+        fontSize: 24,
+        height: 1.25,
+        fontWeight: FontWeight.w700,
+      ),
+      titleLarge: TextStyle(
+        fontFamily: headingFont,
+        fontSize: 22,
+        height: 1.3,
+        fontWeight: FontWeight.w600,
+      ),
+      titleMedium: TextStyle(
+        fontFamily: bodyFont,
+        fontSize: 16,
+        height: 1.35,
+        fontWeight: FontWeight.w600,
+      ),
+      titleSmall: TextStyle(
+        fontFamily: bodyFont,
+        fontSize: 14,
+        height: 1.35,
+        fontWeight: FontWeight.w600,
+      ),
+      bodyLarge: TextStyle(
+        fontFamily: bodyFont,
+        fontSize: 16,
+        height: 1.45,
+        fontWeight: FontWeight.w400,
+      ),
+      bodyMedium: TextStyle(
+        fontFamily: bodyFont,
+        fontSize: 14,
+        height: 1.45,
+        fontWeight: FontWeight.w400,
+      ),
+      bodySmall: TextStyle(
+        fontFamily: bodyFont,
+        fontSize: 12,
+        height: 1.4,
+        fontWeight: FontWeight.w400,
+      ),
+      labelLarge: TextStyle(
+        fontFamily: bodyFont,
+        fontSize: 14,
+        height: 1.3,
+        fontWeight: FontWeight.w600,
+      ),
+      labelMedium: TextStyle(
+        fontFamily: bodyFont,
+        fontSize: 12,
+        height: 1.3,
+        fontWeight: FontWeight.w600,
+      ),
+      labelSmall: TextStyle(
+        fontFamily: bodyFont,
+        fontSize: 11,
+        height: 1.3,
+        fontWeight: FontWeight.w500,
+      ),
     ).apply(bodyColor: color, displayColor: color);
   }
+
+  static const TextStyle displayEmoji = TextStyle(fontSize: 54);
+  static const TextStyle artEmoji = TextStyle(fontSize: 48);
+  static const TextStyle badgeTiny = TextStyle(fontFamily: bodyFont, fontSize: 10, fontWeight: FontWeight.bold);
+  static const TextStyle chipLabel = TextStyle(fontFamily: bodyFont, fontSize: 12);
 }
 
 // -------------------------------------------------------- ThemeExtension

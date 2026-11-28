@@ -62,8 +62,8 @@ class ExpiryAlertPlanner {
             scheduledTime: scheduledTime,
             title: '${item.displayName} expires tomorrow',
             body:
-                'Cook it soon with a rescue recipe. Check it looks and smells fine before using.',
-            payload: 'tab:kitchen',
+                'Try a ${item.displayName.toLowerCase()} recipe today. Check it looks and smells fine before using.',
+            payload: item.displayName,
           ));
         }
       }
@@ -87,8 +87,8 @@ class ExpiryAlertPlanner {
             scheduledTime: scheduledTime,
             title: '${item.displayName} expires today',
             body:
-                'Use it today with a rescue recipe. Check it looks and smells fine before using.',
-            payload: 'tab:kitchen',
+                'Try a ${item.displayName.toLowerCase()} recipe today. Check it looks and smells fine before using.',
+            payload: item.displayName,
           ));
         }
       }

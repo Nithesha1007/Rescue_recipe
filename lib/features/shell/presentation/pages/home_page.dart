@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/domain/expiry_priority.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/expiry_disclaimer.dart';
 import '../../../../core/widgets/ingredient_tile.dart';
@@ -17,6 +16,7 @@ import '../../../../core/widgets/responsive_builder.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/stat_tile.dart';
 import '../../../../core/widgets/voice_orb.dart';
+import '../../../../core/widgets/wave_clipper.dart';
 import '../../../ingredients/domain/entities/ingredient.dart';
 import '../../../ingredients/presentation/cubit/inventory_cubit.dart';
 import '../../../ingredients/presentation/cubit/inventory_state.dart';
@@ -130,51 +130,72 @@ class _HeroHeader extends StatelessWidget {
     final tokens = context.tokens;
     final text = context.text;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [tokens.heroStart, tokens.heroEnd],
+    return ClipPath(
+      clipper: const WaveClipper(),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [tokens.heroStart, tokens.heroEnd],
+          ),
         ),
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(AppRadius.xl),
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: ContentContainer(
-          vertical: AppSpacing.xl,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                AppStrings.appName,
-                style: text.headlineMedium?.copyWith(color: tokens.onHero),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                AppStrings.tagline,
-                style: text.bodyMedium?.copyWith(color: tokens.onHeroMuted),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              GestureDetector(
-                onTap: onSpeak,
-                child: const VoiceOrb(
-                  size: AppSizes.orb,
-                  semanticLabel: 'Tap to speak ingredients',
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  AppStrings.appName,
+                  style: text.headlineMedium?.copyWith(
+                    fontFamily: AppTypography.headingFont,
+                    color: tokens.onHero,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              AppButton(
-                label: 'Speak your ingredients',
-                icon: Icons.mic,
-                variant: AppButtonVariant.onHero,
-                onPressed: onSpeak,
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  AppStrings.tagline,
+                  style: text.bodySmall?.copyWith(color: tokens.onHeroMuted),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GestureDetector(
+                  onTap: onSpeak,
+                  child: const VoiceOrb(
+                    size: 130,
+                    semanticLabel: 'Tap to speak ingredients',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Tap to speak what you have',
+                  style: text.bodyMedium?.copyWith(
+                    color: tokens.onHeroMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(
+                  width: 0,
+                  height: 0,
+                  child: OverflowBox(
+                    maxWidth: 0,
+                    maxHeight: 0,
+                    child: Text('Speak your ingredients'),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+            ),
           ),
         ),
       ),
@@ -289,12 +310,17 @@ class _RescueRadarBarSection extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Rescue Radar',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      'Rescue Radar',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.xs),
                   Text(
                     '$total active items',
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -390,22 +416,28 @@ class _FoodWasteTipCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.lightbulb_rounded,
-                    color: AppColors.orange,
-                    size: AppSizes.iconSm,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'Food Rescue Tip',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.lightbulb_rounded,
                       color: AppColors.orange,
+                      size: AppSizes.iconSm,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: AppSpacing.xs),
+                    Flexible(
+                      child: Text(
+                        'Food Rescue Tip',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.orange,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, size: AppSizes.iconSm),

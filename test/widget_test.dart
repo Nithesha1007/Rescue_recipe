@@ -32,6 +32,7 @@ import 'package:rescue_recipe/features/settings/domain/usecases/get_settings.dar
 import 'package:rescue_recipe/features/settings/domain/usecases/update_settings.dart';
 import 'package:rescue_recipe/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:rescue_recipe/features/shell/presentation/cubit/navigation_cubit.dart';
+import 'package:rescue_recipe/features/shell/presentation/pages/app_shell.dart';
 import 'package:rescue_recipe/features/voice/domain/repositories/ingredient_extraction_repository.dart';
 import 'package:rescue_recipe/features/voice/domain/repositories/speech_repository.dart';
 import 'package:rescue_recipe/features/voice/domain/usecases/apply_voice_correction.dart';
@@ -197,7 +198,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const RescueRecipeApp());
+    await tester.pumpWidget(const RescueRecipeApp(home: AppShell()));
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text(AppStrings.appName), findsWidgets);
@@ -212,7 +213,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const RescueRecipeApp());
+    await tester.pumpWidget(const RescueRecipeApp(home: AppShell()));
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(NavigationRail), findsOneWidget);
@@ -227,7 +228,7 @@ void main() {
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    await tester.pumpWidget(const RescueRecipeApp());
+    await tester.pumpWidget(const RescueRecipeApp(home: AppShell()));
     await tester.pump(const Duration(seconds: 1));
 
     expect(tester.takeException(), isNull);
@@ -238,7 +239,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const RescueRecipeApp());
+    await tester.pumpWidget(const RescueRecipeApp(home: AppShell()));
     await tester.pump(const Duration(seconds: 1));
 
     await tester.tap(find.text('Kitchen'));
@@ -247,16 +248,16 @@ void main() {
     expect(find.text('My Kitchen'), findsOneWidget);
   });
 
-  testWidgets('tapping Speak your ingredients opens VoiceInputPage',
+  testWidgets('tapping VoiceOrb opens VoiceInputPage',
       (tester) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const RescueRecipeApp());
+    await tester.pumpWidget(const RescueRecipeApp(home: AppShell()));
     await tester.pump(const Duration(seconds: 1));
 
-    await tester.tap(find.text('Speak your ingredients'));
+    await tester.tap(find.bySemanticsLabel('Tap to speak ingredients'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/confetti_celebration.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_state.dart';
-import '../../../../core/widgets/expiry_disclaimer.dart';
-import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/loading_skeleton.dart';
 import '../../../../core/widgets/pulsing_mic.dart';
 import '../../../../core/widgets/responsive_builder.dart';
@@ -101,79 +101,97 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
             ],
           ),
           body: SafeArea(
-            child: switch (state.flowStatus) {
-              CookingFlowStatus.loading => const Center(
-                  child: LoadingSkeleton(width: 240, height: 180),
-                ),
-              CookingFlowStatus.error => ErrorState(
-                  message: state.errorMessage ?? 'An unexpected error occurred.',
-                  onRetry: () => Navigator.of(context).pop(),
-                ),
-              CookingFlowStatus.finished => _buildFinishedView(context, state),
-              _ => _buildActiveCookingView(context, state),
-            },
+            child: _buildBody(context, state),
           ),
         );
       },
     );
   }
 
+  Widget _buildBody(BuildContext context, CookingState state) {
+    switch (state.flowStatus) {
+      case CookingFlowStatus.loading:
+      case CookingFlowStatus.initial:
+        return const Center(child: LoadingSkeletonList(count: 3));
+
+      case CookingFlowStatus.error:
+        return ErrorState(
+          message: state.errorMessage ?? 'An error occurred during cooking.',
+          retryLabel: 'Retry',
+          onRetry: () {
+            final session = state.session;
+            if (session != null) {
+              context.read<CookingBloc>().add(CookingStarted(session.recipe));
+            }
+          },
+        );
+
+      case CookingFlowStatus.finished:
+        return _buildFinishedView(context, state);
+
+      case CookingFlowStatus.running:
+      case CookingFlowStatus.paused:
+      case CookingFlowStatus.confirmingFinish:
+        return _buildActiveCookingView(context, state);
+    }
+  }
+
   Widget _buildFinishedView(BuildContext context, CookingState state) {
     final theme = Theme.of(context);
 
-    return ContentContainer(
+    return ConfettiCelebration(
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.check_circle_rounded,
-                size: 72,
-                color: AppColors.lime,
+              Container(
+                width: 80,
+                height: 80,
+                decoration: const BoxDecoration(
+                  color: AppColors.limeSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  size: 48,
+                  color: AppColors.low,
+                ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.lg),
               Text(
-                'Bon Appetit!',
+                'Recipe Completed!',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  fontFamily: AppTypography.headingFont,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'You completed ${state.session?.recipe.title ?? 'the recipe'}.',
+                'Great job rescuing food today.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.xl),
               AppCard(
-                child: Column(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStat(
-                          context,
-                          count: state.rescuedCount,
-                          label: 'Rescued Items',
-                          color: AppColors.lime,
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: theme.dividerColor,
-                        ),
-                        _buildStat(
-                          context,
-                          count: state.totalDeducted,
-                          label: 'Inventory Used',
-                          color: AppColors.orange,
-                        ),
-                      ],
+                    _buildStat(
+                      context,
+                      count: state.rescuedCount,
+                      label: 'Rescued',
+                      color: AppColors.low,
+                    ),
+                    _buildStat(
+                      context,
+                      count: state.totalDeducted,
+                      label: 'Deducted',
+                      color: AppColors.orange,
                     ),
                   ],
                 ),
@@ -227,8 +245,7 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
       );
     }
 
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape;
 
     if (isLandscape) {
       return _buildLandscapeLayout(context, state, session);
@@ -241,12 +258,14 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
     CookingState state,
     dynamic session,
   ) {
+    final step = session.recipe.steps[session.currentStepIndex];
+
     return ContentContainer(
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
+              horizontal: AppSpacing.lg,
               vertical: AppSpacing.xs,
             ),
             child: StepIndicator(
@@ -255,43 +274,12 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.xs),
-                  _buildFocusCard(context, session),
-                  const SizedBox(height: AppSpacing.sm),
-                  if (state.spokenFeedback != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                      child: GlassCard(
-                        padding: const EdgeInsets.all(AppSpacing.sm),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.record_voice_over_rounded,
-                              size: AppSizes.iconSm,
-                              color: AppColors.orange,
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Expanded(
-                              child: Text(
-                                state.spokenFeedback!,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  const ExpiryDisclaimer(),
-                ],
-              ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: _buildFocusCard(context, session, state, step),
             ),
           ),
-          _buildControlBar(context, state, session),
+          _buildControlBar(context, state, session, step),
         ],
       ),
     );
@@ -302,11 +290,13 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
     CookingState state,
     dynamic session,
   ) {
+    final step = session.recipe.steps[session.currentStepIndex];
+
     return Row(
       children: [
         Expanded(
           flex: 6,
-          child: SingleChildScrollView(
+          child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               children: [
@@ -315,79 +305,101 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
                   count: session.totalSteps,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                _buildFocusCard(context, session),
-                const SizedBox(height: AppSpacing.xs),
-                const ExpiryDisclaimer(),
+                Expanded(child: _buildFocusCard(context, session, state, step)),
               ],
             ),
           ),
         ),
         Expanded(
           flex: 4,
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                ),
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildMicButton(context, state),
-                const SizedBox(height: AppSpacing.sm),
-                _buildControlButtons(context, state, session),
-              ],
-            ),
-          ),
+          child: _buildControlBar(context, state, session, step),
         ),
       ],
     );
   }
 
-  Widget _buildFocusCard(BuildContext context, dynamic session) {
+  Widget _buildFocusCard(
+    BuildContext context,
+    dynamic session,
+    CookingState state,
+    dynamic step,
+  ) {
     final theme = Theme.of(context);
-    final stepNum = session.currentStepIndex + 1;
-    final totalSteps = session.totalSteps;
+    final String? tip = step.tip;
+    final int? minutes = step.minutes;
 
     return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
-                  'STEP $stepNum OF $totalSteps',
+                  'Step ${session.currentStepIndex + 1} of ${session.totalSteps}',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: AppColors.orange,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.volume_up_rounded),
-                iconSize: AppSizes.iconSm,
-                tooltip: 'Read step aloud',
+                icon: const Icon(Icons.volume_up_rounded, size: AppSizes.iconSm),
+                tooltip: 'Read again',
                 onPressed: () {
                   context.read<CookingBloc>().add(const StepRepeatTriggered());
                 },
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            session.currentStepText,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w500,
-              height: 1.35,
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: [
+              if (tip != null && tip.isNotEmpty)
+                Chip(
+                  avatar: const Icon(Icons.lightbulb_outline_rounded, size: 16),
+                  label: Text('Tip: $tip', style: theme.textTheme.labelSmall),
+                  backgroundColor: AppColors.limeSoft,
+                ),
+              if (minutes != null && minutes > 0)
+                ActionChip(
+                  avatar: const Icon(Icons.timer_outlined, size: 16),
+                  label: Text(
+                    state.isTimerActive
+                        ? 'Timer: ${_formatTimer(state.timerSecondsRemaining ?? (minutes * 60))}'
+                        : 'Start ${minutes}m timer',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: state.isTimerActive ? AppColors.orange : null,
+                    ),
+                  ),
+                  onPressed: () {
+                    final bloc = context.read<CookingBloc>();
+                    if (state.isTimerActive) {
+                      bloc.add(const StopStepTimer());
+                    } else {
+                      bloc.add(StartStepTimer(minutes * 60));
+                    }
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Text(
+                session.currentStepText,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],
@@ -395,14 +407,21 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
     );
   }
 
+  String _formatTimer(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
   Widget _buildControlBar(
     BuildContext context,
     CookingState state,
     dynamic session,
+    dynamic step,
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
+        horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
@@ -417,9 +436,38 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildMicButton(context, state),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.sm),
+          _buildVoiceHintChips(context),
+          const SizedBox(height: AppSpacing.sm),
           _buildControlButtons(context, state, session),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVoiceHintChips(BuildContext context) {
+    final hints = ['"Next"', '"Back"', '"Repeat"', '"Pause"', '"Tip"', '"Timer"'];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: hints.map((h) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: Text(
+                h,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -433,19 +481,17 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
     };
 
     final hintText = switch (state.audioState) {
-      AudioSessionState.listening => 'Listening... say "Next", "Repeat", or "Pause"',
-      AudioSessionState.speaking => 'Speaking...',
+      AudioSessionState.listening => 'Listening... say "Next", "Back", "Tip", or "Timer"',
+      AudioSessionState.speaking => 'Speaking steps...',
       AudioSessionState.pausedListeningForResume => 'Paused in background',
-      _ => state.isPaused
-          ? 'Paused. Tap mic or say "Resume"'
-          : 'Tap mic or say a command',
+      _ => state.isPaused ? 'Paused. Tap mic or say "Resume"' : 'Tap mic or speak commands',
     };
 
     return Column(
       children: [
         PulsingMic(
           state: micState,
-          size: 58,
+          size: 54,
           onTap: () {
             context.read<CookingBloc>().add(const MicToggled());
           },
@@ -470,26 +516,23 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
     final bloc = context.read<CookingBloc>();
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         Expanded(
-          child: AppButton(
+          child: _buildActionButton(
+            context,
+            icon: Icons.arrow_back_rounded,
             label: 'Back',
-            variant: AppButtonVariant.outlined,
-            icon: Icons.skip_previous_rounded,
-            onPressed: session.isFirstStep
-                ? null
-                : () => bloc.add(const StepPreviousTriggered()),
+            enabled: !session.isFirstStep,
+            onPressed: () => bloc.add(const StepPreviousTriggered()),
           ),
         ),
-        const SizedBox(width: AppSpacing.xs),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: AppButton(
+          child: _buildActionButton(
+            context,
+            icon: state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
             label: state.isPaused ? 'Resume' : 'Pause',
-            variant: AppButtonVariant.text,
-            icon: state.isPaused
-                ? Icons.play_arrow_rounded
-                : Icons.pause_rounded,
+            enabled: true,
             onPressed: () {
               if (state.isPaused) {
                 bloc.add(const CookingResumedTriggered());
@@ -499,25 +542,80 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
             },
           ),
         ),
-        const SizedBox(width: AppSpacing.xs),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: AppButton(
+          child: _buildActionButton(
+            context,
+            icon: session.isLastStep ? Icons.check_circle_rounded : Icons.arrow_forward_rounded,
             label: session.isLastStep ? 'Finish' : 'Next',
-            variant: AppButtonVariant.filled,
-            icon: session.isLastStep
-                ? Icons.check_rounded
-                : Icons.skip_next_rounded,
-            onPressed: () => bloc.add(const StepNextTriggered()),
+            enabled: true,
+            isPrimary: true,
+            onPressed: () {
+              if (session.isLastStep) {
+                bloc.add(const FinishCookingRequested());
+              } else {
+                bloc.add(const StepNextTriggered());
+              }
+            },
           ),
         ),
       ],
     );
   }
 
-  bool _isFinishing = false;
+  Widget _buildActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required bool enabled,
+    required VoidCallback onPressed,
+    bool isPrimary = false,
+  }) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: enabled ? onPressed : null,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: enabled
+              ? (isPrimary ? AppColors.orange : theme.colorScheme.surfaceContainerHigh)
+              : theme.colorScheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: enabled
+                  ? (isPrimary ? AppColors.white : theme.colorScheme.onSurface)
+                  : theme.colorScheme.outline,
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: enabled
+                      ? (isPrimary ? AppColors.white : theme.colorScheme.onSurface)
+                      : theme.colorScheme.outline,
+                ),
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _showIngredientsSheet(BuildContext context, Recipe recipe) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -526,9 +624,7 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
   }
 
   void _showFinishSheet(BuildContext context, CookingState state) {
-    final bloc = context.read<CookingBloc>();
-
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       isDismissible: false,
@@ -536,16 +632,12 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
       backgroundColor: Colors.transparent,
       builder: (_) => FinishConfirmationSheet(
         proposals: state.deductionProposals,
-        onToggle: (id) => bloc.add(DeductionProposalToggled(id)),
+        onToggle: (id) => context.read<CookingBloc>().add(DeductionProposalToggled(id)),
         onConfirm: () {
-          if (_isFinishing) return;
-          _isFinishing = true;
           Navigator.of(context).pop();
-          bloc.add(const ConfirmDeductionsAndFinish());
+          context.read<CookingBloc>().add(const ConfirmDeductionsAndFinish());
         },
-        onCancel: () {
-          Navigator.of(context).pop();
-        },
+        onCancel: () => Navigator.of(context).pop(),
       ),
     );
   }

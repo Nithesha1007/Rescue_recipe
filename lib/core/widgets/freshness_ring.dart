@@ -3,19 +3,21 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../domain/expiry_priority.dart';
+import '../domain/ingredient_emoji.dart';
 import '../theme/app_theme.dart';
 
-/// Circular countdown. The arc shrinks and shifts green -> orange -> red as
-/// the expiry date nears. [daysLeft] is null when there is no date.
+/// Circular countdown with ingredient emoji in center and animated ring.
 class FreshnessRing extends StatelessWidget {
   const FreshnessRing({
     super.key,
     required this.daysLeft,
+    this.ingredientName,
     this.maxDays = 7,
     this.size = AppSizes.ring,
   });
 
   final int? daysLeft;
+  final String? ingredientName;
   final int maxDays;
   final double size;
 
@@ -23,7 +25,6 @@ class FreshnessRing extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final scheme = context.colors;
-    final text = context.text;
     final int? days = daysLeft;
 
     final double fraction = days == null
@@ -52,11 +53,9 @@ class FreshnessRing extends StatelessWidget {
       )!;
     }
 
-    final String centerLabel = days == null
-        ? '?'
-        : days < 0
-            ? '!'
-            : '$days';
+    final emoji = ingredientName != null
+        ? IngredientEmoji.forIngredient(ingredientName!)
+        : '🧺';
 
     final String semantic = days == null
         ? 'No expiry date'
@@ -71,36 +70,52 @@ class FreshnessRing extends StatelessWidget {
     return Semantics(
       label: semantic,
       excludeSemantics: true,
-      child: SizedBox.square(
-        dimension: size,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween<double>(end: progress),
-          duration: AppDurations.slow,
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) => RepaintBoundary(
-            child: CustomPaint(
-              painter: _RingPainter(
-                progress: value,
-                color: ringColor,
-                trackColor: scheme.outlineVariant,
-                strokeWidth: AppSizes.ringStroke * (size / AppSizes.ring),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox.square(
+            dimension: size,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(end: progress),
+              duration: AppDurations.slow,
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) => RepaintBoundary(
+                child: CustomPaint(
+                  painter: _RingPainter(
+                    progress: value,
+                    color: ringColor,
+                    trackColor: scheme.outlineVariant,
+                    strokeWidth: AppSizes.ringStroke * (size / AppSizes.ring),
+                  ),
+                  child: child,
+                ),
               ),
-              child: child,
-            ),
-          ),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  centerLabel,
-                  style: text.labelLarge?.copyWith(color: scheme.onSurface),
+              child: Center(
+                child: SizedBox(
+                  width: size * 0.6,
+                  height: size * 0.6,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: Text(emoji),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+          const SizedBox(height: 3),
+          Text(
+            days == null
+                ? 'No date'
+                : days < 0
+                    ? 'Expired'
+                    : days == 0
+                        ? 'Today'
+                        : '${days}d left',
+            style: AppTypography.badgeTiny.copyWith(
+              color: ringColor,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -121,35 +136,38 @@ class _RingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Offset center = size.center(Offset.zero);
-    final double radius = (size.shortestSide - strokeWidth) / 2;
+    final double radius = (math.min(size.width, size.height) - strokeWidth) / 2;
+    final Offset center = Offset(size.width / 2, size.height / 2);
 
-    final Paint track = Paint()
+    final Paint trackPaint = Paint()
+      ..color = trackColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..color = trackColor;
-    canvas.drawCircle(center, radius, track);
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(center, radius, trackPaint);
 
     if (progress <= 0) return;
 
-    final Paint arc = Paint()
+    final Paint progressPaint = Paint()
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = strokeWidth
-      ..color = color;
+      ..strokeWidth = strokeWidth;
+
+    const double startAngle = -math.pi / 2;
+    final double sweepAngle = 2 * math.pi * progress;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * progress,
+      startAngle,
+      sweepAngle,
       false,
-      arc,
+      progressPaint,
     );
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress ||
-      old.color != color ||
-      old.trackColor != trackColor ||
-      old.strokeWidth != strokeWidth;
+  bool shouldRepaint(covariant _RingPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.color != color ||
+      oldDelegate.trackColor != trackColor ||
+      oldDelegate.strokeWidth != strokeWidth;
 }

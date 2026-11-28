@@ -32,7 +32,41 @@ class VoiceInputPage extends StatefulWidget {
 class _VoiceInputPageState extends State<VoiceInputPage> {
   late final TextEditingController _transcriptController;
   late final TextEditingController _correctionController;
+  String _currentLocale = 'en_IN';
   bool _isConfirming = false;
+
+  Widget _buildLanguageChipRow(BuildContext context) {
+    const locales = [
+      ('en_IN', 'English (India)'),
+      ('en_US', 'English (US)'),
+      ('ta_IN', 'Tamil'),
+      ('hi_IN', 'Hindi'),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: locales.map((loc) {
+          final isSelected = _currentLocale == loc.$1;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: ChoiceChip(
+              label: Text(loc.$2, style: AppTypography.chipLabel),
+              selected: isSelected,
+              selectedColor: AppColors.orange,
+              onSelected: (val) {
+                if (val) {
+                  setState(() => _currentLocale = loc.$1);
+                  context.read<VoiceInputBloc>().add(StartListening(localeId: loc.$1));
+                }
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -112,30 +146,6 @@ class _VoiceInputPageState extends State<VoiceInputPage> {
                 Navigator.of(context).pop();
               },
             ),
-            actions: [
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.translate_rounded),
-                tooltip: 'Recognition language',
-                onSelected: (loc) {
-                  // Restart listening with the newly selected locale
-                  context.read<VoiceInputBloc>().add(StartListening(localeId: loc));
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: 'en_IN',
-                    child: Text('English (India) - en_IN'),
-                  ),
-                  PopupMenuItem(
-                    value: 'en_US',
-                    child: Text('English (US) - en_US'),
-                  ),
-                  PopupMenuItem(
-                    value: 'en_GB',
-                    child: Text('English (UK) - en_GB'),
-                  ),
-                ],
-              ),
-            ],
           ),
           body: SafeArea(
             child: ContentContainer(
@@ -241,7 +251,9 @@ class _VoiceInputPageState extends State<VoiceInputPage> {
                 ? 'Voice orb recording, sound level ${(soundLevel * 100).toInt()}%'
                 : 'Voice orb idle',
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
+          _buildLanguageChipRow(context),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             isListening ? 'Listening...' : 'Tap the microphone to speak',
             style: context.text.titleMedium?.copyWith(

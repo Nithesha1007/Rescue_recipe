@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../theme/app_theme.dart';
 import 'app_card.dart';
 
@@ -24,7 +23,7 @@ class SettingsSection extends StatelessWidget {
             padding: const EdgeInsets.only(
               left: AppSpacing.xs,
               bottom: AppSpacing.xs,
-              top: AppSpacing.sm,
+              top: AppSpacing.md,
             ),
             child: Text(
               title!,
@@ -37,8 +36,8 @@ class SettingsSection extends StatelessWidget {
         ],
         AppCard(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.xs,
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
           ),
           child: Column(
             children: [
@@ -80,68 +79,99 @@ class SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
 
-    Widget content = Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isSqueezed = constraints.maxWidth < 360 || textScale > 1.2;
+
+        Widget textContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                subtitle!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        );
+
+        Widget body;
+        if (isSqueezed && trailing != null) {
+          // Wrap trailing below text
+          body = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: AppSizes.iconSm, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  Expanded(child: textContent),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: trailing!,
+              ),
+            ],
+          );
+        } else {
+          // Standard side-by-side row
+          body = Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: AppSizes.iconSm,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                Icon(icon, size: AppSizes.iconSm, color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(width: AppSpacing.sm),
               ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+              Expanded(child: textContent),
               if (trailing != null) ...[
                 const SizedBox(width: AppSpacing.sm),
                 trailing!,
               ],
             ],
+          );
+        }
+
+        Widget content = Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              body,
+              if (bottomControl != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                bottomControl!,
+              ],
+            ],
           ),
-          if (bottomControl != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            bottomControl!,
-          ],
-        ],
-      ),
+        );
+
+        if (onTap != null) {
+          return InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: content,
+          );
+        }
+
+        return content;
+      },
     );
-
-    if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: content,
-      );
-    }
-
-    return content;
   }
 }

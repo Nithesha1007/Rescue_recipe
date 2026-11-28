@@ -12,14 +12,12 @@ import 'features/recipes/presentation/bloc/recipes_event.dart';
 import 'features/settings/presentation/cubit/settings_cubit.dart';
 import 'features/settings/presentation/cubit/settings_state.dart';
 import 'features/shell/presentation/cubit/navigation_cubit.dart';
-import 'features/shell/presentation/pages/app_shell.dart';
-
-
-
+import 'features/shell/presentation/pages/splash_page.dart';
 import 'features/voice/presentation/bloc/voice_input_bloc.dart';
 
 class RescueRecipeApp extends StatefulWidget {
-  const RescueRecipeApp({super.key});
+  final Widget? home;
+  const RescueRecipeApp({super.key, this.home});
 
   @override
   State<RescueRecipeApp> createState() => _RescueRecipeAppState();
@@ -37,7 +35,10 @@ class _RescueRecipeAppState extends State<RescueRecipeApp> {
       await sl<NotificationScheduler>().init(
         onSelectNotification: (payload) {
           if (sl.isRegistered<NavigationCubit>()) {
-            sl<NavigationCubit>().select(NavTab.kitchen);
+            sl<NavigationCubit>().select(NavTab.recipes);
+            if (payload != null && payload.isNotEmpty && sl.isRegistered<RecipesBloc>()) {
+              sl<RecipesBloc>().add(ApplyRecipeFilter(focusIngredient: payload));
+            }
           }
         },
       );
@@ -79,7 +80,7 @@ class _RescueRecipeAppState extends State<RescueRecipeApp> {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: themeMode,
-            home: const AppShell(),
+            home: widget.home ?? const SplashPage(),
           );
         },
       ),
