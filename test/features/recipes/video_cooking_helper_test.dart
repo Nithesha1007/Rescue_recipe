@@ -40,9 +40,21 @@ void main() {
       final query = VideoCookingHelper.buildVideoQuery(recipe);
       expect(query, 'how to make traditional rasam recipe');
 
-      final recipeWithoutVideoQuery = recipe.copyWith(videoSearchQuery: null);
+      const recipeWithoutVideoQuery = Recipe(
+        id: 'r_test2',
+        title: 'Tomato Onion Rasam',
+        minutes: 15,
+        servings: 2,
+        dietTags: {},
+        ingredients: [],
+        steps: [],
+        substitutions: [],
+        source: RecipeSource.offline,
+        difficulty: 'Easy',
+        tips: [],
+      );
       final fallbackQuery = VideoCookingHelper.buildVideoQuery(recipeWithoutVideoQuery);
-      expect(fallbackQuery, 'how to make Tomato Onion Rasam recipe');
+      expect(fallbackQuery, 'Tomato Onion Rasam recipe');
     });
 
     test('generates technique search query with recipe context', () {

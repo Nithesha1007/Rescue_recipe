@@ -46,8 +46,8 @@ To reset the app to an pristine state in under 10 seconds:
 
 1. Open RescueRecipe.
 2. Tap the **Profile / Settings** tab (far right).
-3. Scroll down to **Data Management**.
-4. Tap **"Clear All My Data"** $\rightarrow$ Confirm **"Delete Everything"**.
+3. Scroll down to **Data & Privacy**.
+4. Tap **"Clear All My Data"** $\rightarrow$ Confirm **"Clear All Data?"**.
    - *Result*: Clears all ingredients from Hive, resets preferences, and clears usage history.
 5. Return to the **Home** screen.
    - *Result*: Clean initial dashboard ready for the demo speech sentence.

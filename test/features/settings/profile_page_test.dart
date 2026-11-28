@@ -170,11 +170,11 @@ void main() {
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
-    expect(find.text('Diet & Cuisine Preferences'), findsOneWidget);
+    expect(find.text('Food Preferences & Allergens'), findsOneWidget);
     expect(find.text('Speech & Voice Assistant'), findsOneWidget);
-    expect(find.text('Notifications'), findsOneWidget);
-    expect(find.text('Appearance'), findsOneWidget);
-    expect(find.text('Data & Storage'), findsOneWidget);
+    expect(find.text('Expiry Alerts & Reminders'), findsOneWidget);
+    expect(find.text('Appearance & Accessibility'), findsOneWidget);
+    expect(find.text('Data & Privacy'), findsOneWidget);
     expect(find.text('Clear All My Data'), findsOneWidget);
   });
 

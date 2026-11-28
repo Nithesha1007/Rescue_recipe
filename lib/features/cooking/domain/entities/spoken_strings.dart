@@ -20,8 +20,7 @@ class SpokenStrings {
     switch (lang) {
       case GuideLanguage.tamil:
         return 'இது முதல் படி.';
-      case GuideLanguage.hindi:
-        return 'यह पहला चरण है।';
+      case GuideLanguage.hindi:        return 'यह पहला चरण है।';
       case GuideLanguage.tanglish:
         return 'Idhu mudhal step.';
       case GuideLanguage.english:

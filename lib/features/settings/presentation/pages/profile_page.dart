@@ -17,6 +17,7 @@ import '../../../ingredients/data/datasources/demo_ingredients.dart';
 import '../../../ingredients/presentation/cubit/inventory_cubit.dart';
 import '../../../ingredients/presentation/cubit/inventory_state.dart';
 import '../../../insights/presentation/cubit/insights_cubit.dart';
+import '../../../insights/domain/entities/insights_summary.dart';
 import '../../../recipes/domain/entities/diet_tag.dart';
 import '../../../voice/data/datasources/gemini_remote_datasource.dart';
 import '../../domain/entities/user_preferences.dart';
@@ -190,7 +191,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         alignment: Alignment.center,
                         child: Text(
                           selectedEmoji,
-                          style: const TextStyle(fontSize: 42),
+                          style: AppTypography.heroEmoji,
                         ),
                       ),
                     ),
@@ -215,7 +216,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               color: isSel ? AppColors.orange.withValues(alpha: 0.1) : null,
                             ),
-                            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                            child: Text(emoji, style: AppTypography.pickerEmoji),
                           ),
                         );
                       }).toList(),
@@ -351,7 +352,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildHeader(BuildContext context, UserPreferences prefs) {
     final theme = Theme.of(context);
     final text = theme.textTheme;
-    final insights = context.watch<InsightsCubit>().state.summary;
+    InsightsSummary? insights;
+    try {
+      insights = context.watch<InsightsCubit>().state.summary;
+    } catch (_) {
+      // In case InsightsCubit is not above ProfilePage
+    }
     final completion = _calculateProfileCompletion(prefs);
     final levelName = insights?.levelName ?? 'Seedling';
 
@@ -373,7 +379,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     border: Border.all(color: AppColors.orange.withValues(alpha: 0.4), width: 2),
                   ),
                   alignment: Alignment.center,
-                  child: Text(prefs.avatarEmoji, style: const TextStyle(fontSize: 32)),
+                  child: Text(prefs.avatarEmoji, style: AppTypography.avatarEmoji),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -429,18 +435,17 @@ class _ProfilePageState extends State<ProfilePage> {
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildQuickStat(context, '${insights?.rescuedCount ?? 0}', 'Rescued', AppColors.low),
+                Expanded(child: _buildQuickStat(context, '${insights?.rescuedCount ?? 0}', 'Rescued', AppColors.low)),
                 Container(width: 1, height: 28, color: theme.colorScheme.outlineVariant),
-                _buildQuickStat(context, '${insights?.currentStreak ?? 0} d', 'Streak', AppColors.orange),
+                Expanded(child: _buildQuickStat(context, '${insights?.currentStreak ?? 0} d', 'Streak', AppColors.orange)),
                 Container(width: 1, height: 28, color: theme.colorScheme.outlineVariant),
-                _buildQuickStat(
+                Expanded(child: _buildQuickStat(
                   context,
                   '${prefs.currencySymbol}${insights?.estimatedMoneySaved.toStringAsFixed(0) ?? "0"}',
                   'Saved',
                   AppColors.low,
-                ),
+                )),
               ],
             ),
           ),
@@ -450,7 +455,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Profile Completion', style: text.labelSmall),
+              Expanded(child: Text('Profile Completion', style: text.labelSmall)),
               Text('${(completion * 100).toInt()}%', style: text.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
             ],
           ),
@@ -1174,7 +1179,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 },
               ),
               AppButton(
-                label: 'Delete Everything',
+                label: 'Clear All My Data',
                 variant: AppButtonVariant.outlined,
                 icon: Icons.delete_forever_rounded,
                 onPressed: () => _showClearConfirmation(context),

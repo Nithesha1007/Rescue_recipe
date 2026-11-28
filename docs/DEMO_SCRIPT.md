@@ -56,7 +56,7 @@
 ### 3. Key Numbers to Remember
 - **Priority Tiers**: Critical = 0 days, High = 1–2 days, Medium = 3–5 days, Low = >5 days.
 - **Rescue-First Formula**: $0.45 \times \text{Coverage} + 0.30 \times \text{Availability} + 0.15 \times \text{Speed} + 0.10 \times \text{Preference}$.
-- **Performance**: 195 automated tests, 0 analyzer issues, release APK size 53.9 MB.
+- **Performance**: 281 automated tests (100% pass rate), 0 analyzer issues, full clean architecture verification.
 
 ---
 

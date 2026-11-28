@@ -333,9 +333,10 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -429,23 +430,19 @@ class _CookingViewState extends State<_CookingView> with WidgetsBindingObserver 
               );
             },
           ),
-          const SizedBox(height: AppSpacing.xs),
-          const SizedBox(height: AppSpacing.md),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Text(
-                session.currentStepText,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  height: 1.45,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            session.currentStepText,
+            style: theme.textTheme.titleMedium?.copyWith(
+              height: 1.45,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   String _formatTimer(int seconds) {
     final m = seconds ~/ 60;

@@ -25,23 +25,26 @@ RescueRecipe tackles this problem with a voice-first approach: speak your grocer
 
 ## Features
 
-- **Voice Input with Live Feedback**: Speech-to-text with glowing animated `VoiceOrb` waveform.
+- **Voice Input with Live Feedback**: Speech-to-text with glowing animated `VoiceOrb` waveform, multilingual support (English, Tamil, Hindi, Tanglish), and Auto (AI) or Live mode.
 - **Editable Transcript & Corrections**: Full text editing and conversational voice corrections (*"Actually I don't have onions"*).
 - **Offline Fallback Parser**: Fast regex-based parser extracts quantities, units, and dates when offline or without an API key.
+- **Guided Add Ingredient Sheet**: Smart category grid, Levenshtein typo-correction ("Did you mean?"), storage location, and shelf-life recommendations.
 - **Expiry Priority Engine**: Dynamic classification into 6 urgency tiers based on calendar days left.
 - **Urgent Expiry Notifications**: Local notifications planned for critical and high-priority items.
-- **Rescue-First Recipe Generation**: AI-generated recipes filtered and ranked deterministically by Dart.
-- **Transparent Match Reason & Badges**: Explains why a recipe ranked high (e.g. *"Uses 1 urgent item (tomatoes)"*).
-- **Substitutions for Missing Items**: Suggests realistic pantry swaps for missing ingredients.
-- **Hands-Free Cooking Mode**: Text-to-speech reads steps aloud while on-device parser responds to voice navigation (*"Next"*, *"Repeat"*, *"How much onion?"*).
+- **Rescue-First Recipe Generation**: AI-generated recipes filtered and ranked deterministically by Dart with strict allergen hard exclusions and disliked ingredients handling.
+- **Media Resolver & Recipe Photos**: Multilayered real dish photos (Hive/Disk cache, Pexels, TheMealDB, Wikipedia food thumbnails) with smart DishArt fallbacks.
+- **Step Ingredients & Video Help**: Exact step measurements highlighted on-the-fly and one-tap video cooking techniques and full YouTube tutorials.
+- **Kitchen Inventory Overhaul**: Hive-backed pantry with storage tabs (All, Fridge, Freezer, Pantry), multi-select bulk actions, mini priority bar, and list/grid views.
+- **Hands-Free Cooking Mode**: Text-to-speech reads steps aloud while on-device parser responds to voice navigation (*"Next"*, *"Repeat"*, *"How much onion?"*, timers).
 - **Screen WakeLock**: Prevents screen sleep while actively cooking.
-- **Kitchen Inventory**: Hive-backed offline pantry with freshness rings and status management.
-- **Impact & Insights**: Illustrative gamified metrics:
-  - *Rescue Score* (illustrative point score)
-  - *Rescue Streak* (illustrative consecutive rescue tracking)
-  - *Estimated Money Saved* (illustrative financial savings estimate)
-  - *Achievements* (illustrative milestone badges)
-- **Profile & Preferences**: Dietary rules (Vegetarian, Vegan, Gluten-Free, Keto, etc.), speech speed controls, appearance toggle, and complete local data reset.
+- **Impact & Insights Overhaul**:
+  - *28-Day Rescue Streak Calendar* (visual activity dots)
+  - *Hero Summary Card* with week-over-week trends
+  - *Top Rescued Foods* and *Waste Watch List* with preservation tips
+  - *Illustrative Achievements* with detail bottom sheet
+  - *Share Impact Card* to share food rescue milestones via native sharesheet
+- **Comprehensive Profile & Preferences**: Household sizing, cooking skill, spice levels, dietary rules, allergens, voice input/guide language selection, AI connection diagnostics, JSON export via `share_plus`, and one-tap data clearing.
+- **Splash & 4-Step Onboarding**: Smooth animated entrance respecting system reduce-motion settings and onboarding wizard for new users.
 
 ---
 

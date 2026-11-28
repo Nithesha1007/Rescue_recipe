@@ -76,9 +76,8 @@ class RecipeImage extends StatelessWidget {
                   ),
                   child: Text(
                     creditText,
-                    style: const TextStyle(
+                    style: AppTypography.cardMicro.copyWith(
                       color: AppColors.white,
-                      fontSize: 10,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

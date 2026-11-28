@@ -81,7 +81,7 @@ class IngredientTile extends StatelessWidget {
                                 ),
                                 if (storageIcon != null) ...[
                                   const SizedBox(width: AppSpacing.xs),
-                                  Text(storageIcon!, style: const TextStyle(fontSize: 14)),
+                                  Text(storageIcon!, style: AppTypography.smallEmoji),
                                 ],
                               ],
                             ),

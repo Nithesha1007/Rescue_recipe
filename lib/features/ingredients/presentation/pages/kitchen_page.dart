@@ -333,7 +333,7 @@ class _KitchenPageState extends State<KitchenPage> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 children: [
-                  Text(loc.emoji, style: const TextStyle(fontSize: 20)),
+                  Text(loc.emoji, style: AppTypography.mediumEmoji),
                   const SizedBox(width: AppSpacing.md),
                   Text(loc.displayName),
                 ],

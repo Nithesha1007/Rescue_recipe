@@ -118,12 +118,7 @@ class _InsightsPageState extends State<InsightsPage> {
                               const SizedBox(width: AppSpacing.sm),
                               const Text(
                                 'RescueRecipe',
-                                style: TextStyle(
-                                  color: AppColors.white,
-                                  fontFamily: 'Fraunces',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: AppTypography.shareTitle,
                               ),
                             ],
                           ),
@@ -135,11 +130,7 @@ class _InsightsPageState extends State<InsightsPage> {
                             ),
                             child: Text(
                               summary.levelName,
-                              style: const TextStyle(
-                                color: AppColors.lime,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: AppTypography.shareBadge,
                             ),
                           ),
                         ],
@@ -147,20 +138,11 @@ class _InsightsPageState extends State<InsightsPage> {
                       const SizedBox(height: AppSpacing.xl),
                       Text(
                         '${summary.rescuedCount}',
-                        style: const TextStyle(
-                          color: AppColors.orange,
-                          fontSize: 56,
-                          fontWeight: FontWeight.bold,
-                          height: 1.0,
-                        ),
+                        style: AppTypography.shareCount,
                       ),
                       const Text(
                         'Ingredients Rescued',
-                        style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppTypography.shareSubtitle,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Row(
@@ -170,15 +152,11 @@ class _InsightsPageState extends State<InsightsPage> {
                             children: [
                               Text(
                                 '$currency${summary.estimatedMoneySaved.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  color: AppColors.lime,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: AppTypography.shareStatNum,
                               ),
                               const Text(
                                 'Saved',
-                                style: TextStyle(color: AppColors.mist, fontSize: 12),
+                                style: AppTypography.shareStatLabel,
                               ),
                             ],
                           ),
@@ -187,29 +165,21 @@ class _InsightsPageState extends State<InsightsPage> {
                             children: [
                               Text(
                                 '${summary.currentStreak} Days',
-                                style: const TextStyle(
-                                  color: AppColors.orange,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: AppTypography.shareStatOrange,
                               ),
                               const Text(
                                 'Rescue Streak',
-                                style: TextStyle(color: AppColors.mist, fontSize: 12),
+                                style: AppTypography.shareStatLabel,
                               ),
                             ],
                           ),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      Text(
+                      const Text(
                         'Speak Your Ingredients. Rescue Your Food. Reduce Food Waste.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.white.withValues(alpha: 0.7),
-                          fontSize: 11,
-                          fontStyle: FontStyle.italic,
-                        ),
+                        style: AppTypography.shareTagline,
                       ),
                     ],
                   ),
@@ -378,9 +348,11 @@ class _InsightsPageState extends State<InsightsPage> {
                           children: [
                             const Icon(Icons.stars_rounded, color: AppColors.orange),
                             const SizedBox(width: AppSpacing.sm),
-                            Text(
-                              'How Rescue Points Work',
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            Expanded(
+                              child: Text(
+                                'How Rescue Points Work',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ],
                         ),
@@ -745,27 +717,39 @@ class _InsightsPageState extends State<InsightsPage> {
             },
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xs,
             children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.low),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.low),
+                  ),
+                  const SizedBox(width: 4),
+                  Text('Active Rescue Day', style: text.labelSmall),
+                ],
               ),
-              const SizedBox(width: 4),
-              Text('Active Rescue Day', style: text.labelSmall),
-              const SizedBox(width: AppSpacing.md),
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text('No Activity', style: text.labelSmall),
+                ],
               ),
-              const SizedBox(width: 4),
-              Text('No Activity', style: text.labelSmall),
             ],
           ),
         ],
@@ -786,7 +770,7 @@ class _InsightsPageState extends State<InsightsPage> {
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Row(
               children: [
-                Text(item.emoji, style: const TextStyle(fontSize: 20)),
+                Text(item.emoji, style: AppTypography.mediumEmoji),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   flex: 2,
@@ -833,7 +817,7 @@ class _InsightsPageState extends State<InsightsPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.emoji, style: const TextStyle(fontSize: 22)),
+                Text(item.emoji, style: AppTypography.watchEmoji),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(

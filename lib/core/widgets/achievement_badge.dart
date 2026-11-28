@@ -40,11 +40,9 @@ class AchievementBadge extends StatelessWidget {
           '$title, ${isUnlocked ? "unlocked" : "locked"}${progressHint != null ? ", $progressHint" : ""}',
       child: AppCard(
         padding: const EdgeInsets.all(AppSpacing.sm),
-        child: SizedBox(
-          width: 140,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
               Container(
                 width: 48,
                 height: 48,
@@ -106,7 +104,6 @@ class AchievementBadge extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

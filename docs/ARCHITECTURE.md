@@ -50,14 +50,14 @@ The codebase is organized into distinct feature modules under `lib/features/`:
 
 | Module | Core Responsibility | Key Components |
 | :--- | :--- | :--- |
-| **`voice`** | Audio capture, transcript stream, AI extraction | `VoiceInputBloc`, `GeminiRemoteDataSource`, `OfflineIngredientParser` |
-| **`ingredients`** | Inventory management, date resolver, merging | `InventoryCubit`, `ExpiryDateResolver`, `IngredientMerger`, Hive box |
-| **`recipes`** | Recipe generation, Rescue-First ranking | `RecipesBloc`, `RescueFirstRanker`, `GeminiRecipeDataSource` |
-| **`cooking`** | Hands-free cooking session, voice commands | `CookingBloc`, `VoiceSessionController`, `CommandParser`, `TtsService` |
-| **`insights`** | Gamified points, streaks, savings, badges | `InsightsCubit`, `InsightsCalculator`, `WeeklyBarChart` |
+| **`voice`** | Audio capture, transcript stream, AI extraction | `VoiceInputBloc`, `GeminiRemoteDataSource`, `OfflineIngredientParser`, `GluedIngredientSplitter` |
+| **`ingredients`** | Inventory management, date resolver, merging | `InventoryCubit`, `ExpiryDateResolver`, `IngredientMerger`, `IngredientCatalog`, Hive box |
+| **`recipes`** | Recipe generation, Rescue-First ranking, media | `RescueSuggestionsCubit`, `RescueFirstRanker`, `RecipeExclusionFilter`, `DishImageResolver`, `StepIngredientLinker`, `VideoCookingHelper` |
+| **`cooking`** | Hands-free cooking session, voice commands | `CookingBloc`, `VoiceSessionController`, `CommandParser`, `TtsService`, Step timers |
+| **`insights`** | Gamified points, streaks, savings, badges | `InsightsCubit`, `InsightsCalculator`, `WeeklyBarChart`, 28-day calendar |
 | **`notifications`**| Expiry alert scheduling and safety checks | `NotificationService`, `ExpiryAlertPlanner` |
-| **`settings`** | Dietary filters, speech speed, data management | `SettingsCubit`, `UserPreferences` |
-| **`shell`** | Top-level adaptive scaffold and Home screen | `NavigationCubit`, `HomePage`, `ContentContainer` |
+| **`settings`** | Dietary filters, speech speed, data management | `SettingsCubit`, `UserPreferences`, `SharePlus` JSON exporter |
+| **`shell`** | Top-level adaptive scaffold and Home screen | `NavigationCubit`, `HomePage`, `SplashPage`, Onboarding wizard |
 
 ---
 

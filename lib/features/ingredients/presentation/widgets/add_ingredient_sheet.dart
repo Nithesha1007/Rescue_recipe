@@ -176,7 +176,7 @@ class _AddIngredientSheetState extends State<AddIngredientSheet>
                     CircleAvatar(
                       radius: 24,
                       backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                      child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                      child: Text(emoji, style: AppTypography.largeEmoji),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
@@ -288,11 +288,11 @@ class _AddIngredientSheetState extends State<AddIngredientSheet>
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(itemEmoji, style: const TextStyle(fontSize: 24)),
+                                      Text(itemEmoji, style: AppTypography.largeEmoji),
                                       const SizedBox(height: 4),
                                       Text(
                                         item,
-                                        style: text.labelSmall?.copyWith(fontSize: 10),
+                                        style: AppTypography.cardMicro,
                                         textAlign: TextAlign.center,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,

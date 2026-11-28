@@ -190,8 +190,28 @@ abstract final class AppTypography {
 
   static const TextStyle displayEmoji = TextStyle(fontSize: 54);
   static const TextStyle artEmoji = TextStyle(fontSize: 48);
+  static const TextStyle heroEmoji = TextStyle(fontSize: 42);
+  static const TextStyle avatarEmoji = TextStyle(fontSize: 32);
+  static const TextStyle pickerEmoji = TextStyle(fontSize: 26);
+  static const TextStyle largeEmoji = TextStyle(fontSize: 24);
+  static const TextStyle watchEmoji = TextStyle(fontSize: 22);
+  static const TextStyle mediumEmoji = TextStyle(fontSize: 20);
+  static const TextStyle smallEmoji = TextStyle(fontSize: 14);
+
+  static const TextStyle scoreGiant = TextStyle(fontFamily: headingFont, fontSize: 56, fontWeight: FontWeight.w800);
   static const TextStyle badgeTiny = TextStyle(fontFamily: bodyFont, fontSize: 10, fontWeight: FontWeight.bold);
   static const TextStyle chipLabel = TextStyle(fontFamily: bodyFont, fontSize: 12);
+  static const TextStyle cardMicro = TextStyle(fontFamily: bodyFont, fontSize: 10);
+  static const TextStyle cardFine = TextStyle(fontFamily: bodyFont, fontSize: 11);
+
+  static const TextStyle shareTitle = TextStyle(color: AppColors.white, fontFamily: headingFont, fontSize: 18, fontWeight: FontWeight.bold);
+  static const TextStyle shareBadge = TextStyle(color: AppColors.lime, fontFamily: bodyFont, fontSize: 12, fontWeight: FontWeight.bold);
+  static const TextStyle shareCount = TextStyle(color: AppColors.orange, fontFamily: headingFont, fontSize: 56, fontWeight: FontWeight.bold, height: 1.0);
+  static const TextStyle shareSubtitle = TextStyle(color: AppColors.white, fontFamily: bodyFont, fontSize: 16, fontWeight: FontWeight.w600);
+  static const TextStyle shareStatNum = TextStyle(color: AppColors.lime, fontFamily: headingFont, fontSize: 22, fontWeight: FontWeight.bold);
+  static const TextStyle shareStatOrange = TextStyle(color: AppColors.orange, fontFamily: headingFont, fontSize: 22, fontWeight: FontWeight.bold);
+  static const TextStyle shareStatLabel = TextStyle(color: AppColors.mist, fontFamily: bodyFont, fontSize: 12);
+  static const TextStyle shareTagline = TextStyle(color: AppColors.mist, fontFamily: bodyFont, fontSize: 11, fontStyle: FontStyle.italic);
 }
 
 // -------------------------------------------------------- ThemeExtension

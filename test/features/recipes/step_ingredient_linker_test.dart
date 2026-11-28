@@ -63,11 +63,11 @@ void main() {
     });
 
     test('formats chip labels cleanly with amount and unit', () {
-      expect(StepIngredientLinker.formatChipLabel(ingTomatoes), 'tomato 2 pcs');
-      expect(StepIngredientLinker.formatChipLabel(ingGarlic), 'garlic 4 cloves');
+      expect(StepIngredientLinker.formatChipLabel(ingTomatoes), 'Tomato 2 pcs');
+      expect(StepIngredientLinker.formatChipLabel(ingGarlic), 'Garlic 4 cloves');
 
       const noAmount = RecipeIngredient(name: 'salt', quantity: null, unit: null);
-      expect(StepIngredientLinker.formatChipLabel(noAmount), 'salt (as needed)');
+      expect(StepIngredientLinker.formatChipLabel(noAmount), 'Salt (as needed)');
     });
 
     test('recites linked ingredients naturally before step instruction', () {
@@ -82,7 +82,7 @@ void main() {
         recipeIngredients: allIngredients,
       );
 
-      expect(spoken, contains('Using 1 pcs onion.'));
+      expect(spoken, contains('Using 1 pcs Onion.'));
       expect(spoken, contains('Heat oil and saute until golden.'));
     });
   });
